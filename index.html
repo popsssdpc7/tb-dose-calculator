@@ -126,27 +126,27 @@ function calculateDose() {
         <div class="drug">
             <b>Isoniazid (H)</b><br>
             ขนาดยา: ${H.min} – ${H.max} mg/day
-            ${H.exceeded ? '<br><span class="alert">⚠ เกิน max dose (300 mg)</span>' : ''}
+            ${H.exceeded ? '<br><span class="alert">⚠ max dose (300 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Rifampicin (R)</b><br>
             ขนาดยา: ${R.min} – ${R.max} mg/day<br>
             ${R_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
-            ${R.exceeded ? '<span class="alert">⚠ เกิน max dose (600 mg)</span>' : ''}
+            ${R.exceeded ? '<span class="alert">⚠ max dose (600 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Pyrazinamide (Z)</b><br>
             ขนาดยา: ${Z.min} – ${Z.max} mg/day
-            ${Z.exceeded ? '<br><span class="alert">⚠ เกิน max dose (2000 mg)</span>' : ''}
+            ${Z.exceeded ? '<br><span class="alert">⚠ max dose (2000 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Ethambutol (E)</b><br>
             ขนาดยา: ${E.min} – ${E.max} mg/day<br>
             ${E_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
-            ${E.exceeded ? '<span class="alert">⚠ เกิน max dose (2000 mg)</span>' : ''}
+            ${E.exceeded ? '<span class="alert">⚠ max dose (2000 mg)</span>' : ''}
         </div>
 
         <small>
@@ -159,3 +159,4 @@ function calculateDose() {
 
 </body>
 </html>
+
