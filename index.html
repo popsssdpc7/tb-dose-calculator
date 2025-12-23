@@ -118,7 +118,7 @@ function calculateDose() {
     const E = calculateDrug(weight, 15, 20, 1200);
 
     const H_opt = tabletOptions(H.min, H.max, [100], 300);
-    const R_opt = tabletOptions(R.min, R.max, [300], 600);
+    const R_opt = tabletOptions(R.min, R.max, [300, 450], 600);
     const Z_opt = tabletOptions(Z.min, Z.max, [500], 2000);
     const E_opt = tabletOptions(E.min, E.max, [500, 400], 1200);
 
@@ -169,3 +169,4 @@ function calculateDose() {
 
 </body>
 </html>
+
