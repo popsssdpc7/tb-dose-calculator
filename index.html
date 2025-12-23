@@ -145,19 +145,19 @@ function calculateDose() {
     <div class="section">
     <h3>🔹 ยาแยกเม็ด</h3>
 
-    <div class="drug"><b>Isoniazid (H)</b><br>
+    <div class="drug"><b>Isoniazid (H) 4-6 mkd</b><br>
     ${H.min} – ${H.max} mg/day<br>
     ${tabletOptions(H.min, H.max, [100], 300)}</div>
 
-    <div class="drug"><b>Rifampicin (R)</b><br>
+    <div class="drug"><b>Rifampicin (R) 8-12 mkd</b><br>
     ${R.min} – ${R.max} mg/day<br>
     ${tabletOptions(R.min, R.max, [300], 600)}</div>
 
-    <div class="drug"><b>Pyrazinamide (Z)</b><br>
+    <div class="drug"><b>Pyrazinamide (Z) 20-30 mkd</b><br>
     ${Z.min} – ${Z.max} mg/day<br>
     ${tabletOptions(Z.min, Z.max, [500], 2000)}</div>
 
-    <div class="drug"><b>Ethambutol (E)</b><br>
+    <div class="drug"><b>Ethambutol (E) 15-20 mkd</b><br>
     ${E.min} – ${E.max} mg/day<br>
     ${tabletOptions(E.min, E.max, [500, 400], 1200)}
     <br><span class="alert">⚠ max dose 1200 mg</span></div>
@@ -176,6 +176,7 @@ function calculateDose() {
     <small>
     ⚠️ เครื่องมือนี้ใช้เพื่อช่วยคำนวณขนาดยาเท่านั้น  
     ไม่ทดแทนดุลยพินิจแพทย์
+    ⚠️ การคำนวณอาจเกิดความผิดพลาดได้ กรุณาตรวจสอบก่อนนำข้อมูลไปใช้
     </small>
     `;
 }
@@ -183,4 +184,5 @@ function calculateDose() {
 
 </body>
 </html>
+
 
