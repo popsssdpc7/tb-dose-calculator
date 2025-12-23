@@ -11,14 +11,14 @@ body {
     padding: 30px;
 }
 .container {
-    max-width: 720px;
+    max-width: 760px;
     margin: auto;
     background: white;
     padding: 25px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-h2 { text-align: center; }
+h2, h3 { text-align: center; }
 label { font-weight: bold; }
 input {
     width: 100%;
@@ -42,6 +42,9 @@ button:hover { background: #125aa0; }
     padding: 15px;
     border-radius: 8px;
     background: #eef3f8;
+}
+.section {
+    margin-top: 20px;
 }
 .drug {
     margin-bottom: 15px;
@@ -67,100 +70,107 @@ small { color: #555; }
 </div>
 
 <script>
-// ===== Drug dose calculation =====
-function calculateDrug(weight, minMgKg, maxMgKg, maxDose) {
-    const minDose = weight * minMgKg;
-    const maxDoseCalc = weight * maxMgKg;
+// ===== Dose range =====
+function doseRange(weight, minKg, maxKg, maxDose) {
     return {
-        min: Math.round(minDose),
-        max: Math.round(Math.min(maxDoseCalc, maxDose)),
+        min: Math.round(weight * minKg),
+        max: Math.round(Math.min(weight * maxKg, maxDose)),
         maxDose: maxDose
     };
 }
 
+// ===== Tablet options (single drug) =====
+function tabletOptions(minDose, maxDose, strengths, absoluteMax) {
+    let opts = [];
+    strengths.forEach(s => {
+        for (let t = 1; t <= 10; t++) {
+            let dose = t * s;
+            if (dose >= minDose && dose <= maxDose && dose <= absoluteMax) {
+                opts.push(`• ${t} เม็ด (${s} mg/tab = ${dose} mg)`);
+            }
+        }
+    });
+    return opts.join("<br>");
+}
+
 // ===== FDC calculation =====
-function calculateFDCOptions(weight, fdc, components) {
-    let options = [];
-
+function fdcOptions(weight, components) {
+    let valid = [];
     for (let tabs = 1; tabs <= 10; tabs++) {
-        let valid = true;
-
+        let ok = true;
         for (let c of components) {
             let dose = tabs * c.strength;
-            let min = weight * c.minMgKg;
-            let max = Math.min(weight * c.maxMgKg, c.maxDose);
-
+            let min = weight * c.minKg;
+            let max = Math.min(weight * c.maxKg, c.maxDose);
             if (dose < min || dose > max) {
-                valid = false;
+                ok = false;
                 break;
             }
         }
-
-        if (valid) {
-            options.push(tabs);
-        }
+        if (ok) valid.push(`${tabs} เม็ด`);
     }
-    return options;
+    return valid.length ? valid.join(", ") : `<span class="alert">⚠ ไม่พบขนาดที่เหมาะสม</span>`;
 }
 
 function calculateDose() {
-    const weight = document.getElementById("weight").value;
-    if (!weight || weight <= 0) {
+    const w = document.getElementById("weight").value;
+    if (!w || w <= 0) {
         alert("กรุณาระบุน้ำหนักให้ถูกต้อง");
         return;
     }
 
     // ===== Single drugs =====
-    const H = calculateDrug(weight, 4, 6, 300);
-    const R = calculateDrug(weight, 8, 12, 600);
-    const Z = calculateDrug(weight, 20, 30, 2000);
-    const E = calculateDrug(weight, 15, 20, 1200);
+    const H = doseRange(w, 4, 6, 300);
+    const R = doseRange(w, 8, 12, 600);
+    const Z = doseRange(w, 20, 30, 2000);
+    const E = doseRange(w, 15, 20, 1200);
 
-    // ===== FDC definitions =====
-    const FDC2 = calculateFDCOptions(weight, "2FDC", [
-        { name: "H", strength: 75,  minMgKg: 4,  maxMgKg: 6,  maxDose: 300 },
-        { name: "R", strength: 150, minMgKg: 8,  maxMgKg: 12, maxDose: 600 }
+    // ===== FDC =====
+    const FDC2 = fdcOptions(w, [
+        { strength: 75,  minKg: 4,  maxKg: 6,  maxDose: 300 },
+        { strength: 150, minKg: 8,  maxKg: 12, maxDose: 600 }
     ]);
 
-    const FDC4 = calculateFDCOptions(weight, "4FDC", [
-        { name: "H", strength: 75,  minMgKg: 4,  maxMgKg: 6,  maxDose: 300 },
-        { name: "R", strength: 150, minMgKg: 8,  maxMgKg: 12, maxDose: 600 },
-        { name: "Z", strength: 400, minMgKg: 20, maxMgKg: 30, maxDose: 2000 },
-        { name: "E", strength: 275, minMgKg: 15, maxMgKg: 20, maxDose: 1200 }
+    const FDC4 = fdcOptions(w, [
+        { strength: 75,  minKg: 4,  maxKg: 6,  maxDose: 300 },
+        { strength: 150, minKg: 8,  maxKg: 12, maxDose: 600 },
+        { strength: 400, minKg: 20, maxKg: 30, maxDose: 2000 },
+        { strength: 275, minKg: 15, maxKg: 20, maxDose: 1200 }
     ]);
 
-    const result = document.getElementById("result");
-    result.style.display = "block";
+    const r = document.getElementById("result");
+    r.style.display = "block";
 
-    result.innerHTML = `
-    <div class="drug">
-        <b>Isoniazid (H)</b>: ${H.min} – ${H.max} mg/day
+    r.innerHTML = `
+    <div class="section">
+    <h3>🔹 ยาแยกเม็ด</h3>
+
+    <div class="drug"><b>Isoniazid (H)</b><br>
+    ${H.min} – ${H.max} mg/day<br>
+    ${tabletOptions(H.min, H.max, [100], 300)}</div>
+
+    <div class="drug"><b>Rifampicin (R)</b><br>
+    ${R.min} – ${R.max} mg/day<br>
+    ${tabletOptions(R.min, R.max, [300], 600)}</div>
+
+    <div class="drug"><b>Pyrazinamide (Z)</b><br>
+    ${Z.min} – ${Z.max} mg/day<br>
+    ${tabletOptions(Z.min, Z.max, [500], 2000)}</div>
+
+    <div class="drug"><b>Ethambutol (E)</b><br>
+    ${E.min} – ${E.max} mg/day<br>
+    ${tabletOptions(E.min, E.max, [500, 400], 1200)}
+    <br><span class="alert">⚠ max dose 1200 mg</span></div>
     </div>
 
-    <div class="drug">
-        <b>Rifampicin (R)</b>: ${R.min} – ${R.max} mg/day
-    </div>
+    <div class="section">
+    <h3>🔹 Fixed-Dose Combination (FDC)</h3>
 
-    <div class="drug">
-        <b>Pyrazinamide (Z)</b>: ${Z.min} – ${Z.max} mg/day
-    </div>
+    <div class="drug"><b>2FDC</b> (H75 + R150)<br>
+    ขนาดยาที่ใช้ได้: ${FDC2}</div>
 
-    <div class="drug">
-        <b>Ethambutol (E)</b>: ${E.min} – ${E.max} mg/day
-    </div>
-
-    <div class="drug">
-        <b>2FDC</b> (H 75 mg + R 150 mg)<br>
-        ${FDC2.length ? 
-            `ขนาดยาที่ใช้ได้: ${FDC2.map(t => `${t} เม็ด`).join(", ")}` 
-            : '<span class="alert">⚠ ไม่พบขนาดที่อยู่ในช่วง dose</span>'}
-    </div>
-
-    <div class="drug">
-        <b>4FDC</b> (H 75 mg + R 150 mg + Z 400 mg + E 275 mg)<br>
-        ${FDC4.length ? 
-            `ขนาดยาที่ใช้ได้: ${FDC4.map(t => `${t} เม็ด`).join(", ")}` 
-            : '<span class="alert">⚠ ไม่พบขนาดที่อยู่ในช่วง dose</span>'}
+    <div class="drug"><b>4FDC</b> (H75 + R150 + Z400 + E275)<br>
+    ขนาดยาที่ใช้ได้: ${FDC4}</div>
     </div>
 
     <small>
@@ -173,3 +183,4 @@ function calculateDose() {
 
 </body>
 </html>
+
