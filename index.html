@@ -116,7 +116,7 @@ function calculateDose() {
     const Z = calculateDrug(weight, 20, 30, 2000);
     const E = calculateDrug(weight, 15, 20, 2000);
 
-    const R_tabs = calculateTablets(R.max, [150, 300]);
+    const R_tabs = calculateTablets(R.max, [300, 450]);
     const E_tabs = calculateTablets(E.max, [400, 500]);
 
     const resultDiv = document.getElementById("result");
@@ -159,4 +159,5 @@ function calculateDose() {
 
 </body>
 </html>
+
 
