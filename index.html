@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>TB Drug Dose Calculator</title>
+
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -10,7 +11,7 @@
         padding: 30px;
     }
     .container {
-        max-width: 600px;
+        max-width: 650px;
         margin: auto;
         background: white;
         padding: 25px;
@@ -21,10 +22,14 @@
         text-align: center;
         margin-bottom: 20px;
     }
+    label {
+        font-weight: bold;
+    }
     input {
         width: 100%;
         padding: 8px;
-        margin-bottom: 20px;
+        margin: 10px 0 20px 0;
+        font-size: 16px;
     }
     button {
         width: 100%;
@@ -46,9 +51,9 @@
         background: #eef3f8;
     }
     .drug {
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px dashed #ccc;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed #bbb;
     }
     .alert {
         color: red;
@@ -57,9 +62,11 @@
     small {
         display: block;
         margin-top: 10px;
+        color: #555;
     }
 </style>
 </head>
+
 <body>
 
 <div class="container">
@@ -68,31 +75,33 @@
     <label>น้ำหนักตัว (kg)</label>
     <input type="number" id="weight" placeholder="เช่น 60" min="1">
 
-    <button onclick="calculateDose()">คำนวณ</button>
+    <button onclick="calculateDose()">คำนวณขนาดยา</button>
 
     <div id="result" class="result" style="display:none;"></div>
 </div>
 
 <script>
-function calculateDrug(weight, minMgKg, maxMgKg, maxDose, tabletStrength) {
+function calculateDrug(weight, minMgKg, maxMgKg, maxDose) {
     let minDose = weight * minMgKg;
     let maxDoseCalc = weight * maxMgKg;
 
     let finalMin = Math.min(minDose, maxDose);
     let finalMax = Math.min(maxDoseCalc, maxDose);
 
-    let tabletsMin = Math.round(finalMin / tabletStrength);
-    let tabletsMax = Math.round(finalMax / tabletStrength);
-
-    let exceeded = maxDoseCalc > maxDose;
-
     return {
-        min: finalMin.toFixed(0),
-        max: finalMax.toFixed(0),
-        tabMin: tabletsMin,
-        tabMax: tabletsMax,
-        exceeded: exceeded
+        min: Math.round(finalMin),
+        max: Math.round(finalMax),
+        exceeded: maxDoseCalc > maxDose
     };
+}
+
+function calculateTablets(dose, strengths) {
+    return strengths.map(s => {
+        return {
+            strength: s,
+            tablets: Math.ceil(dose / s)
+        };
+    });
 }
 
 function calculateDose() {
@@ -102,45 +111,47 @@ function calculateDose() {
         return;
     }
 
-    const H = calculateDrug(weight, 4, 6, 300, 100);
-    const R = calculateDrug(weight, 8, 12, 600, 150);
-    const Z = calculateDrug(weight, 20, 30, 2000, 500);
-    const E = calculateDrug(weight, 15, 20, 1200, 400);
+    const H = calculateDrug(weight, 4, 6, 300);
+    const R = calculateDrug(weight, 8, 12, 600);
+    const Z = calculateDrug(weight, 20, 30, 2000);
+    const E = calculateDrug(weight, 15, 20, 2000);
+
+    const R_tabs = calculateTablets(R.max, [150, 300]);
+    const E_tabs = calculateTablets(E.max, [400, 500]);
 
     const resultDiv = document.getElementById("result");
     resultDiv.style.display = "block";
+
     resultDiv.innerHTML = `
         <div class="drug">
             <b>Isoniazid (H)</b><br>
-            ขนาดยา: ${H.min} – ${H.max} mg/day<br>
-            จำนวนเม็ด: ${H.tabMin} – ${H.tabMax} เม็ด (100 mg)<br>
-            ${H.exceeded ? '<span class="alert">⚠ เกิน max dose (300 mg)</span>' : ''}
+            ขนาดยา: ${H.min} – ${H.max} mg/day
+            ${H.exceeded ? '<br><span class="alert">⚠ เกิน max dose (300 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Rifampicin (R)</b><br>
             ขนาดยา: ${R.min} – ${R.max} mg/day<br>
-            จำนวนเม็ด: ${R.tabMin} – ${R.tabMax} เม็ด (150 mg)<br>
+            ${R_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
             ${R.exceeded ? '<span class="alert">⚠ เกิน max dose (600 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Pyrazinamide (Z)</b><br>
-            ขนาดยา: ${Z.min} – ${Z.max} mg/day<br>
-            จำนวนเม็ด: ${Z.tabMin} – ${Z.tabMax} เม็ด (500 mg)<br>
-            ${Z.exceeded ? '<span class="alert">⚠ เกิน max dose (2000 mg)</span>' : ''}
+            ขนาดยา: ${Z.min} – ${Z.max} mg/day
+            ${Z.exceeded ? '<br><span class="alert">⚠ เกิน max dose (2000 mg)</span>' : ''}
         </div>
 
         <div class="drug">
             <b>Ethambutol (E)</b><br>
             ขนาดยา: ${E.min} – ${E.max} mg/day<br>
-            จำนวนเม็ด: ${E.tabMin} – ${E.tabMax} เม็ด (400 mg)<br>
-            ${E.exceeded ? '<span class="alert">⚠ เกิน max dose (1200 mg)</span>' : ''}
+            ${E_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
+            ${E.exceeded ? '<span class="alert">⚠ เกิน max dose (2000 mg)</span>' : ''}
         </div>
 
         <small>
-        ⚠️ ใช้เป็นเครื่องมือช่วยคำนวณ ไม่ทดแทนดุลยพินิจแพทย์<br>
-        คำนวณตามน้ำหนักและขนาดยา mg/kg/day
+        ⚠️ เครื่องมือนี้ใช้เพื่อช่วยคำนวณขนาดยาเท่านั้น  
+        ไม่ทดแทนดุลยพินิจแพทย์
         </small>
     `;
 }
