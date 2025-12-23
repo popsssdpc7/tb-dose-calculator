@@ -5,9 +5,9 @@
 <title>TB Drug Dose Calculator</title>
 <style>
 body{font-family:Arial;background:#f4f6f9;padding:30px}
-.container{max-width:750px;margin:auto;background:#fff;padding:25px;border-radius:10px}
-h2,h3{text-align:center}
-.drug{margin-bottom:15px}
+.container{max-width:850px;margin:auto;background:#fff;padding:25px;border-radius:10px}
+h2,h3{margin-top:25px}
+.drug{margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ccc}
 .alert{color:red;font-weight:bold}
 small{color:#555}
 button{width:100%;padding:12px;background:#1976d2;color:#fff;border:none;border-radius:6px}
@@ -26,7 +26,7 @@ input{width:100%;padding:8px;margin:10px 0}
 </div>
 
 <script>
-function rangeDose(w,min,max,maxDose){
+function doseRange(w,min,max,maxDose){
   let lo=w*min, hi=w*max;
   return {
     min:Math.round(Math.min(lo,maxDose)),
@@ -35,39 +35,89 @@ function rangeDose(w,min,max,maxDose){
   };
 }
 
-function recommend(range,strength){
-  let options=[];
+function recommend(range,strength,maxDose){
+  let opts=[];
   for(let t=0.5;t<=10;t+=0.5){
-    let dose=t*strength;
-    if(dose>=range.min && dose<=range.max){
-      options.push(`${t} เม็ด (${dose} mg)`);
+    let d=t*strength;
+    if(d>=range.min && d<=range.max && d<=maxDose){
+      opts.push(`${t} เม็ด (${d} mg)`);
     }
   }
-  return options.length ? options.join("<br>• ") : "<span class='alert'>⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>";
+  return opts.length
+    ? "• " + opts.join("<br>• ")
+    : "<span class='alert'>⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>";
+}
+
+function fdcCalc(w,strengths){
+  let tabs=[];
+  for(let t=0.5;t<=10;t+=0.5){
+    let ok=true;
+    for(let d of strengths){
+      if(t*d.dose < d.min || t*d.dose > d.max) ok=false;
+    }
+    if(ok) tabs.push(t);
+  }
+  return tabs.length
+    ? `ขนาดยาที่แนะนำ: ${tabs[0]} เม็ด`
+    : "<span class='alert'>⚠ ไม่เหมาะสมกับช่วงน้ำหนักนี้</span>";
 }
 
 function calc(){
   let w=document.getElementById("weight").value;
   if(!w||w<=0){alert("กรอกน้ำหนัก");return;}
 
-  const H=rangeDose(w,4,6,300);
-  const R=rangeDose(w,8,12,600);
-  const Z=rangeDose(w,20,30,2000);
-  const E=rangeDose(w,15,20,1200);
+  const H=doseRange(w,4,6,300);
+  const R=doseRange(w,8,12,600);
+  const Z=doseRange(w,20,30,2000);
+  const E=doseRange(w,15,20,1200);
 
-  let html=`<h3>ยาแยกเม็ด</h3>`;
+  let html=`<h3>ยาแยกเม็ด (IRZE)</h3>`;
+
+  html+=`
+  <div class="drug"><b>Isoniazid (H) 4–6 mg/kg/day</b><br>
+  ${H.min} – ${H.max} mg/day<br>
+  • 100 mg/tab<br>${recommend(H,100,300)}
+  </div>`;
+
+  html+=`
+  <div class="drug"><b>Rifampicin (R) 8–12 mg/kg/day</b><br>
+  ${R.min} – ${R.max} mg/day<br>
+  • 300 mg/tab<br>${recommend(R,300,600)}<br>
+  • 450 mg/tab<br>${recommend(R,450,600)}
+  </div>`;
 
   html+=`
   <div class="drug"><b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
   ${Z.min} – ${Z.max} mg/day<br>
-  • ${recommend(Z,500)}</div>`;
+  • 500 mg/tab<br>${recommend(Z,500,2000)}
+  </div>`;
 
   html+=`
   <div class="drug"><b>Ethambutol (E) 15–20 mg/kg/day</b><br>
   ${E.min} – ${E.max} mg/day<br>
-  • 500 mg/tab<br>• ${recommend(E,500)}<br>
-  • 400 mg/tab<br>• ${recommend(E,400)}
+  • 500 mg/tab<br>${recommend(E,500,1200)}<br>
+  • 400 mg/tab<br>${recommend(E,400,1200)}
   <br><span class="alert">⚠ max dose 1200 mg</span>
+  </div>`;
+
+  html+=`<h3>ยาเม็ดรวม (FDC)</h3>`;
+
+  html+=`
+  <div class="drug"><b>2FDC</b> (H 75 mg + R 150 mg)<br>
+  ${fdcCalc(w,[
+    {dose:75,min:H.min,max:H.max},
+    {dose:150,min:R.min,max:R.max}
+  ])}
+  </div>`;
+
+  html+=`
+  <div class="drug"><b>4FDC</b> (H 75 + R 150 + Z 400 + E 275 mg)<br>
+  ${fdcCalc(w,[
+    {dose:75,min:H.min,max:H.max},
+    {dose:150,min:R.min,max:R.max},
+    {dose:400,min:Z.min,max:Z.max},
+    {dose:275,min:E.min,max:E.max}
+  ])}
   </div>`;
 
   html+=`
