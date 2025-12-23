@@ -5,103 +5,86 @@
 <title>TB Drug Dose Calculator</title>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f9;
-        padding: 30px;
-    }
-    .container {
-        max-width: 650px;
-        margin: auto;
-        background: white;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h2 {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    label {
-        font-weight: bold;
-    }
-    input {
-        width: 100%;
-        padding: 8px;
-        margin: 10px 0 20px 0;
-        font-size: 16px;
-    }
-    button {
-        width: 100%;
-        padding: 12px;
-        background: #1976d2;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 16px;
-        cursor: pointer;
-    }
-    button:hover {
-        background: #125aa0;
-    }
-    .result {
-        margin-top: 25px;
-        padding: 15px;
-        border-radius: 8px;
-        background: #eef3f8;
-    }
-    .drug {
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px dashed #bbb;
-    }
-    .alert {
-        color: red;
-        font-weight: bold;
-    }
-    small {
-        display: block;
-        margin-top: 10px;
-        color: #555;
-    }
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    padding: 30px;
+}
+.container {
+    max-width: 650px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+h2 { text-align: center; }
+label { font-weight: bold; }
+input {
+    width: 100%;
+    padding: 8px;
+    margin: 10px 0 20px;
+    font-size: 16px;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+}
+button:hover { background: #125aa0; }
+.result {
+    margin-top: 25px;
+    padding: 15px;
+    border-radius: 8px;
+    background: #eef3f8;
+}
+.drug {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #bbb;
+}
+.alert { color: red; font-weight: bold; }
+small { color: #555; }
 </style>
 </head>
 
 <body>
 
 <div class="container">
-    <h2>คำนวณขนาดยาวัณโรค</h2>
+<h2>คำนวณขนาดยาวัณโรค</h2>
 
-    <label>น้ำหนักตัว (kg)</label>
-    <input type="number" id="weight" placeholder="เช่น 60" min="1">
+<label>น้ำหนักตัว (kg)</label>
+<input type="number" id="weight" placeholder="เช่น 60" min="1">
 
-    <button onclick="calculateDose()">คำนวณขนาดยา</button>
+<button onclick="calculateDose()">คำนวณขนาดยา</button>
 
-    <div id="result" class="result" style="display:none;"></div>
+<div id="result" class="result" style="display:none;"></div>
 </div>
 
 <script>
 function calculateDrug(weight, minMgKg, maxMgKg, maxDose) {
-    let minDose = weight * minMgKg;
-    let maxDoseCalc = weight * maxMgKg;
-
-    let finalMin = Math.min(minDose, maxDose);
-    let finalMax = Math.min(maxDoseCalc, maxDose);
+    const minDose = weight * minMgKg;
+    const maxDoseCalc = weight * maxMgKg;
+    const usedDose = Math.min(maxDoseCalc, maxDose);
 
     return {
-        min: Math.round(finalMin),
-        max: Math.round(finalMax),
+        min: Math.round(Math.min(minDose, maxDose)),
+        max: Math.round(usedDose),
+        usedDose: Math.round(usedDose),
         exceeded: maxDoseCalc > maxDose
     };
 }
 
-function calculateTablets(dose, strengths) {
-    return strengths.map(s => {
-        return {
-            strength: s,
-            tablets: Math.ceil(dose / s)
-        };
-    });
+function calculateTablets(dose, strength, maxDose) {
+    let tablets = Math.ceil(dose / strength);
+    if (tablets * strength > maxDose) {
+        tablets = Math.floor(maxDose / strength);
+    }
+    return tablets;
 }
 
 function calculateDose() {
@@ -116,50 +99,47 @@ function calculateDose() {
     const Z = calculateDrug(weight, 20, 30, 2000);
     const E = calculateDrug(weight, 15, 20, 1200);
 
-    const R_tabs = calculateTablets(R.max, [300, 450]);
-    const E_tabs = calculateTablets(E.max, [400, 500]);
+    const H_tab = calculateTablets(H.usedDose, 100, 300);
+    const R_tab = calculateTablets(R.usedDose, 300, 600);
+    const Z_tab = calculateTablets(Z.usedDose, 500, 2000);
+    const E_tab = calculateTablets(E.usedDose, 500, 1200);
 
-    const resultDiv = document.getElementById("result");
-    resultDiv.style.display = "block";
+    document.getElementById("result").style.display = "block";
+    document.getElementById("result").innerHTML = `
+    <div class="drug">
+        <b>Isoniazid (H)</b><br>
+        ${H.min} – ${H.max} mg/day<br>
+        • 100 mg/tab → ${H_tab} เม็ด
+        ${H.exceeded ? '<br><span class="alert">⚠ max dose 300 mg</span>' : ''}
+    </div>
 
-    resultDiv.innerHTML = `
-        <div class="drug">
-            <b>Isoniazid (H)</b><br>
-            ขนาดยา: ${H.min} – ${H.max} mg/day
-            ${H.exceeded ? '<br><span class="alert">⚠ max dose (300 mg)</span>' : ''}
-        </div>
+    <div class="drug">
+        <b>Rifampicin (R)</b><br>
+        ${R.min} – ${R.max} mg/day<br>
+        • 300 mg/tab → ${R_tab} เม็ด
+        ${R.exceeded ? '<br><span class="alert">⚠ max dose 600 mg</span>' : ''}
+    </div>
 
-        <div class="drug">
-            <b>Rifampicin (R)</b><br>
-            ขนาดยา: ${R.min} – ${R.max} mg/day<br>
-            ${R_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
-            ${R.exceeded ? '<span class="alert">⚠ max dose (600 mg)</span>' : ''}
-        </div>
+    <div class="drug">
+        <b>Pyrazinamide (Z)</b><br>
+        ${Z.min} – ${Z.max} mg/day<br>
+        • 500 mg/tab → ${Z_tab} เม็ด
+        ${Z.exceeded ? '<br><span class="alert">⚠ max dose 2000 mg</span>' : ''}
+    </div>
 
-        <div class="drug">
-            <b>Pyrazinamide (Z)</b><br>
-            ขนาดยา: ${Z.min} – ${Z.max} mg/day
-            ${Z.exceeded ? '<br><span class="alert">⚠ max dose (2000 mg)</span>' : ''}
-        </div>
+    <div class="drug">
+        <b>Ethambutol (E)</b><br>
+        ${E.min} – ${E.max} mg/day<br>
+        • 500 mg/tab → ${E_tab} เม็ด
+        ${E.exceeded ? '<br><span class="alert">⚠ max dose 1200 mg</span>' : ''}
+    </div>
 
-        <div class="drug">
-            <b>Ethambutol (E)</b><br>
-            ขนาดยา: ${E.min} – ${E.max} mg/day<br>
-            ${E_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
-            ${E.exceeded ? '<span class="alert">⚠ max dose (1200 mg)</span>' : ''}
-        </div>
-
-        <small>
-        ⚠️ เครื่องมือนี้ใช้เพื่อช่วยคำนวณขนาดยาเท่านั้น  
-        ไม่ทดแทนดุลยพินิจแพทย์
-        </small>
+    <small>
+    ⚠️ ใช้เพื่อช่วยคำนวณขนาดยาเท่านั้น ไม่ทดแทนดุลยพินิจแพทย์
+    </small>
     `;
 }
 </script>
 
 </body>
 </html>
-
-
-
-
