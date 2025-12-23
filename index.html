@@ -146,7 +146,7 @@ function calculateDose() {
             <b>Ethambutol (E)</b><br>
             ขนาดยา: ${E.min} – ${E.max} mg/day<br>
             ${E_tabs.map(t => `• ${t.strength} mg/tab → ${t.tablets} เม็ด<br>`).join("")}
-            ${E.exceeded ? '<span class="alert">⚠ max dose (2000 mg)</span>' : ''}
+            ${E.exceeded ? '<span class="alert">⚠ max dose (1200 mg)</span>' : ''}
         </div>
 
         <small>
@@ -159,6 +159,7 @@ function calculateDose() {
 
 </body>
 </html>
+
 
 
 
