@@ -7,7 +7,14 @@
 body { font-family: Arial, sans-serif; margin: 30px; }
 h2 { margin-top: 30px; }
 .box { border: 1px solid #ccc; padding: 15px; margin-top: 15px; }
-.warn { color: red; font-weight: bold; }
+.warn { color: red; font-weight: bold; margin-top: 10px; }
+.footer-warn {
+  margin-top: 40px;
+  padding-top: 15px;
+  border-top: 2px solid #ccc;
+  color: #b00000;
+  font-weight: bold;
+}
 </style>
 </head>
 
@@ -23,6 +30,11 @@ h2 { margin-top: 30px; }
 
 <div id="output"></div>
 
+<div class="footer-warn">
+⚠ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้<br>
+ไม่ทดแทนดุลยพินิจแพทย์
+</div>
+
 <script>
 function roundHalf(x) {
   return Math.round(x * 2) / 2;
@@ -36,28 +48,55 @@ function calculate() {
   let out = "";
 
   /* =========================
-     1) แยกเม็ด I R Z E
+     1) แยกเม็ดยา I R Z E
      ========================= */
-  const I = roundHalf((wt * 5) / 300);
-  const R = roundHalf((wt * 10) / 300);
-  const Z = roundHalf((wt * 25) / 500);
-  const E = roundHalf((wt * 17.5) / 500);
+
+  // Isoniazid
+  const I_min = wt * 4;
+  const I_max = wt * 6;
+  const I_tab = roundHalf((wt * 5) / 300);
+
+  // Rifampicin
+  const R_min = wt * 8;
+  const R_max = wt * 12;
+  const R_tab = roundHalf((wt * 10) / 300);
+
+  // Pyrazinamide
+  const Z_min = wt * 20;
+  const Z_max = Math.min(wt * 30, 2000);
+  const Z_tab = roundHalf((wt * 25) / 500);
+
+  // Ethambutol
+  const E_min = wt * 15;
+  const E_max = Math.min(wt * 20, 1200);
+  const E_tab = roundHalf((wt * 17.5) / 500);
 
   out += `
   <div class="box">
   <h2>1) แยกเม็ดยา I / R / Z / E</h2>
-  Isoniazid 300 mg: ${I} เม็ด/วัน<br>
-  Rifampicin 300 mg: ${R} เม็ด/วัน<br>
-  Pyrazinamide 500 mg: ${Z} เม็ด/วัน<br>
-  Ethambutol 500 mg: ${E} เม็ด/วัน
+
+  <b>Isoniazid (H) 4–6 mg/kg/day</b><br>
+  ${I_min.toFixed(0)} – ${I_max.toFixed(0)} mg/day<br>
+  • ขนาดยาที่แนะนำ: ${I_tab} เม็ด (300 mg)<br><br>
+
+  <b>Rifampicin (R) 8–12 mg/kg/day</b><br>
+  ${R_min.toFixed(0)} – ${R_max.toFixed(0)} mg/day<br>
+  • ขนาดยาที่แนะนำ: ${R_tab} เม็ด (300 mg)<br><br>
+
+  <b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
+  ${Z_min.toFixed(0)} – ${Z_max.toFixed(0)} mg/day (max 2,000 mg)<br>
+  • ขนาดยาที่แนะนำ: ${Z_tab} เม็ด (500 mg)<br><br>
+
+  <b>Ethambutol (E) 15–20 mg/kg/day</b><br>
+  ${E_min.toFixed(0)} – ${E_max.toFixed(0)} mg/day (max 1,200 mg)<br>
+  • ขนาดยาที่แนะนำ: ${E_tab} เม็ด (500 mg)
   </div>
   `;
 
   /* =========================
-     2) 2FDC (H75 + R150)
+     2) 2FDC
      ========================= */
-  const R_need = wt * 10;
-  const tab2 = roundHalf(R_need / 150);
+  const tab2 = roundHalf((wt * 10) / 150);
 
   out += `
   <div class="box">
@@ -68,7 +107,7 @@ function calculate() {
   `;
 
   /* =========================
-     3) 4FDC (H75 + R150 + Z400 + E275)
+     3) 4FDC
      ========================= */
   const tab4 = roundHalf(wt / 15);
 
@@ -95,10 +134,10 @@ function calculate() {
     rpt = wt <= 50 ? 750 : 900;
   }
 
-  let tab3hp = roundHalf(Math.max(inh, rpt) / 300);
+  const tab3hp = roundHalf(Math.max(inh, rpt) / 300);
 
   if (tab3hp * 300 > inh || tab3hp * 300 > rpt) {
-    note = "<div class='warn'>⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ (ขนาดยาอาจเกินคำแนะนำ)</div>";
+    note = "<div class='warn'>⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ</div>";
   }
 
   out += `
