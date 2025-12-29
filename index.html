@@ -3,17 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <title>TB Dose Calculator</title>
+
 <style>
-body { font-family: Arial; max-width: 800px; margin:auto }
-input, button { padding:8px; width:100%; margin-top:6px }
-.section { border:1px solid #ccc; padding:12px; margin-top:15px }
-.ok { color:green; font-weight:bold }
-.warn { color:orange; font-weight:bold }
-.fail { color:red; font-weight:bold }
+body {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: auto;
+}
+input, button {
+  padding: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+.section {
+  border: 1px solid #ccc;
+  padding: 12px;
+  margin-top: 15px;
+}
+.ok { color: green; font-weight: bold; }
+.warn { color: orange; font-weight: bold; }
+.fail { color: red; font-weight: bold; }
 </style>
 </head>
 
 <body>
+
 <h2>TB Dose Calculator</h2>
 
 <label>อายุ (ปี)</label>
@@ -22,105 +36,136 @@ input, button { padding:8px; width:100%; margin-top:6px }
 <label>น้ำหนัก (กก.)</label>
 <input type="number" id="weight">
 
-<button onclick="calc()">คำนวณ</button>
+<button onclick="calculateDose()">คำนวณ</button>
 
-<div id="out"></div>
+<div id="result"></div>
 
 <script>
-function tabs(total, per) {
-  let n = total / per;
-  return (Number.isInteger(n) || n % 0.5 === 0) ? n : null;
+function tabletCount(dose, strength) {
+  var n = dose / strength;
+  if (Math.floor(n) === n || n % 0.5 === 0) {
+    return n;
+  }
+  return null;
 }
 
-function calc() {
-  const age = Number(document.getElementById("age").value);
-  const w   = Number(document.getElementById("weight").value);
-  const out = document.getElementById("out");
+function calculateDose() {
+
+  console.log("clicked");
+
+  var age = Number(document.getElementById("age").value);
+  var w = Number(document.getElementById("weight").value);
+  var result = document.getElementById("result");
 
   if (!w || w <= 0) {
-    alert("กรุณากรอกน้ำหนักให้ถูกต้อง");
+    alert("กรุณากรอกน้ำหนัก");
     return;
   }
 
-  let html = "";
+  var html = "";
 
-  /* ================= 1. แยกเม็ด ================= */
-  html += `<div class="section"><h3>1️⃣ แยกเม็ด (I R Z E)</h3>`;
+  /* ================= 1. แยกเม็ด IRZE ================= */
+  html += '<div class="section"><h3>1) แยกเม็ด (I R Z E)</h3>';
 
-  const drugs = [
-    {n:"Isoniazid (H)", min:4, max:6, str:[300], maxd:300},
-    {n:"Rifampicin (R)", min:8, max:12, str:[300,450], maxd:600},
-    {n:"Pyrazinamide (Z)", min:20, max:30, str:[500], maxd:2000},
-    {n:"Ethambutol (E)", min:15, max:20, str:[400,500], maxd:1200}
-  ];
+  // I
+  var Imin = w * 4;
+  var Imax = Math.min(w * 6, 300);
+  var Itab = tabletCount(Imax, 300);
+  html += '<b>Isoniazid (H)</b> 4–6 mg/kg/day<br>';
+  html += Imin.toFixed(0) + ' – ' + Imax.toFixed(0) + ' mg/day<br>';
+  html += (Itab ? Itab + ' เม็ด (300 mg)' : '<span class="fail">คำนวณเม็ดไม่ได้</span>');
+  html += '<br><br>';
 
-  drugs.forEach(d=>{
-    let low=w*d.min, high=Math.min(w*d.max,d.maxd);
-    html+=`<b>${d.n}</b> ${d.min}-${d.max} mg/kg/day<br>${low.toFixed(0)}–${high.toFixed(0)} mg/day<br>`;
-    let found=false;
-    d.str.forEach(s=>{
-      let t=tabs(high,s);
-      if(t && t*s>=low){
-        html+=`• ${t} เม็ด (${s} mg/tab)<br>`;
-        found=true;
-      }
-    });
-    if(!found) html+=`<span class="fail">ไม่สามารถคำนวณขนาดเม็ดที่เหมาะสมได้</span><br>`;
-    html+=`<br>`;
-  });
-  html+=`</div>`;
+  // R
+  var Rmin = w * 8;
+  var Rmax = Math.min(w * 12, 600);
+  var R300 = tabletCount(Rmax, 300);
+  var R450 = tabletCount(Rmax, 450);
+  html += '<b>Rifampicin (R)</b> 8–12 mg/kg/day<br>';
+  html += Rmin.toFixed(0) + ' – ' + Rmax.toFixed(0) + ' mg/day<br>';
+  if (R300) html += '• ' + R300 + ' เม็ด (300 mg)<br>';
+  if (R450) html += '• ' + R450 + ' เม็ด (450 mg)<br>';
+  if (!R300 && !R450) html += '<span class="fail">คำนวณเม็ดไม่ได้</span><br>';
+  html += '<br>';
+
+  // Z
+  var Zmin = w * 20;
+  var Zmax = Math.min(w * 30, 2000);
+  var Ztab = tabletCount(Zmax, 500);
+  html += '<b>Pyrazinamide (Z)</b> 20–30 mg/kg/day<br>';
+  html += Zmin.toFixed(0) + ' – ' + Zmax.toFixed(0) + ' mg/day<br>';
+  html += (Ztab ? Ztab + ' เม็ด (500 mg)' : '<span class="fail">คำนวณเม็ดไม่ได้</span>');
+  html += '<br><br>';
+
+  // E
+  var Emin = w * 15;
+  var Emax = Math.min(w * 20, 1200);
+  var E400 = tabletCount(Emax, 400);
+  var E500 = tabletCount(Emax, 500);
+  html += '<b>Ethambutol (E)</b> 15–20 mg/kg/day<br>';
+  html += Emin.toFixed(0) + ' – ' + Emax.toFixed(0) + ' mg/day<br>';
+  if (E500) html += '• ' + E500 + ' เม็ด (500 mg)<br>';
+  if (E400) html += '• ' + E400 + ' เม็ด (400 mg)<br>';
+  if (!E400 && !E500) html += '<span class="fail">คำนวณเม็ดไม่ได้</span><br>';
+
+  html += '</div>';
 
   /* ================= 2. 2FDC ================= */
-  html+=`<div class="section"><h3>2️⃣ 2FDC</h3>
-  Isoniazid 75 mg + Rifampicin 150 mg / เม็ด<br>`;
-  let H=w*5, R=w*10;
-  let tH=tabs(H,75), tR=tabs(R,150);
-  if(tH!==null && tH===tR)
-    html+=`<span class="ok">ใช้ ${tH} เม็ด</span>`;
-  else
-    html+=`<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดที่ลงตัวได้</span>`;
-  html+=`</div>`;
+  html += '<div class="section"><h3>2) 2FDC</h3>';
+  html += 'H 75 mg + R 150 mg / เม็ด<br>';
+  var t2H = tabletCount(Imax, 75);
+  var t2R = tabletCount(Rmax, 150);
+  html += (t2H && t2H === t2R)
+    ? '<span class="ok">ใช้ ' + t2H + ' เม็ด</span>'
+    : '<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดที่ลงตัวได้</span>';
+  html += '</div>';
 
   /* ================= 3. 4FDC ================= */
-  html+=`<div class="section"><h3>3️⃣ 4FDC</h3>
-  H75 + R150 + Z400 + E275 mg / เม็ด<br>`;
-  let Z=w*25, E=w*15;
-  let t=[tabs(H,75),tabs(R,150),tabs(Z,400),tabs(E,275)];
-  if(t.every(x=>x!==null && x===t[0]))
-    html+=`<span class="ok">ใช้ ${t[0]} เม็ด</span>`;
+  html += '<div class="section"><h3>3) 4FDC</h3>';
+  html += 'H75 + R150 + Z400 + E275 mg / เม็ด<br>';
+  var t4H = tabletCount(Imax, 75);
+  var t4R = tabletCount(Rmax, 150);
+  var t4Z = tabletCount(Zmax, 400);
+  var t4E = tabletCount(Emax, 275);
+  if (t4H && t4H === t4R && t4H === t4Z && t4H === t4E)
+    html += '<span class="ok">ใช้ ' + t4H + ' เม็ด</span>';
   else
-    html+=`<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดที่ลงตัวได้</span>`;
-  html+=`</div>`;
+    html += '<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดที่ลงตัวได้</span>';
+  html += '</div>';
 
   /* ================= 4. 3HP ================= */
-  html+=`<div class="section"><h3>4️⃣ วัณโรคแฝง (3HP)</h3>
-  1 เม็ด = INH 300 mg + Rifapentine 300 mg<br>`;
+  html += '<div class="section"><h3>4) วัณโรคแฝง (3HP)</h3>';
+  html += '1 เม็ด = INH 300 mg + Rifapentine 300 mg<br>';
 
-  let inh, rpt, note="";
-  if(age<=14){
-    if(w<=15){inh=300;rpt=300}
-    else if(w<=23){inh=500;rpt=450}
-    else if(w<=30){inh=600;rpt=600}
-    else{inh=700;rpt=750}
-  }else{
-    inh=Math.min(Math.ceil((w*15)/100)*100,900);
-    rpt=w<=50?750:900;
+  var inh, rpt;
+  if (age <= 14) {
+    if (w <= 15) { inh = 300; rpt = 300; }
+    else if (w <= 23) { inh = 500; rpt = 450; }
+    else if (w <= 30) { inh = 600; rpt = 600; }
+    else { inh = 700; rpt = 750; }
+  } else {
+    inh = Math.min(Math.ceil((w * 15) / 100) * 100, 900);
+    rpt = (w <= 50) ? 750 : 900;
   }
 
-  let ti=tabs(inh,300), tr=tabs(rpt,300);
-  if(ti && tr){
-    if(ti*300>inh || tr*300>rpt) note="⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ";
-    html+=`INH ${inh} mg → ${ti} เม็ด<br>
-           Rifapentine ${rpt} mg → ${tr} เม็ด<br>
-           <span class="warn">${note}</span>`;
-  }else{
-    html+=`<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
-  }
-  html+=`</div>
-  <p><i>หมายเหตุ: การคำนวณอาจผิดพลาดได้ กรุณาตรวจสอบข้อมูลก่อนนำไปใช้</i></p>`;
+  var ti = tabletCount(inh, 300);
+  var tr = tabletCount(rpt, 300);
 
-  out.innerHTML = html;
+  if (ti && tr) {
+    html += 'INH ' + inh + ' mg → ' + ti + ' เม็ด<br>';
+    html += 'Rifapentine ' + rpt + ' mg → ' + tr + ' เม็ด<br>';
+    if (ti * 300 > inh || tr * 300 > rpt)
+      html += '<span class="warn">⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ</span>';
+  } else {
+    html += '<span class="fail">ไม่สามารถคำนวณจำนวนเม็ดได้</span>';
+  }
+
+  html += '</div>';
+  html += '<p><i>หมายเหตุ: การคำนวณอาจผิดพลาดได้ กรุณาตรวจสอบข้อมูลก่อนนำไปใช้</i></p>';
+
+  result.innerHTML = html;
 }
 </script>
+
 </body>
 </html>
