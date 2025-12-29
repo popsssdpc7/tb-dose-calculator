@@ -52,14 +52,14 @@ function calculate() {
      2) 2FDC
   ==========================*/
   html += `<div class="section"><h3>2️⃣ 2FDC (I/R 300/300 mg)</h3>`;
-  html += calcFDC(w, 300, "เม็ด");
+  html += calcFDC(w, 300);
   html += `</div>`;
 
   /* =========================
      3) 4FDC
   ==========================*/
   html += `<div class="section"><h3>3️⃣ 4FDC (75/150/400/275 mg)</h3>`;
-  html += calcFDC(w, 150, "เม็ด");
+  html += calcFDC(w, 150);
   html += `</div>`;
 
   /* =========================
@@ -68,7 +68,7 @@ function calculate() {
   html += `<div class="section"><h3>4️⃣ 3HP (Isoniazid/Rifapentine 300/300 mg)</h3>`;
   let dose3hp = w * 15;
   let tabs3hp = preferWhole(dose3hp / 300);
-  html += `แนะนำ: ${tabs3hp} เม็ด/สัปดาห์<br>`;
+  html += `แนะนำ: <b>${tabs3hp}</b> เม็ด/สัปดาห์<br>`;
   html += `ปริมาณยาที่ได้ ≈ ${(tabs3hp * 300).toFixed(0)} mg`;
   html += `</div>`;
 
@@ -82,7 +82,7 @@ function calculate() {
 }
 
 /* =========================
-   FUNCTIONS
+   CORE FUNCTIONS
 =========================*/
 function preferWhole(x) {
   let full = Math.round(x);
@@ -93,20 +93,29 @@ function preferWhole(x) {
 function calcDrug(name, w, mgkg, strengths) {
   let dose = w * mgkg;
   let out = `<b>${name}</b><br>`;
-  strengths.forEach(s => {
-    let tabs = preferWhole(dose / s);
-    let minW = ((tabs - 0.5) * s) / mgkg;
-    let maxW = ((tabs + 0.5) * s) / mgkg;
-    out += `- เม็ดละ ${s} mg → ${tabs} เม็ด (${(tabs*s).toFixed(0)} mg)
-            <span class="small">[ช่วงน้ำหนัก ~ ${minW.toFixed(1)}–${maxW.toFixed(1)} กก.]</span><br>`;
+
+  strengths.forEach(strength => {
+    let rawTabs = dose / strength;
+    let tabs = preferWhole(rawTabs);
+
+    let minW = ((tabs - 0.5) * strength) / mgkg;
+    let maxW = ((tabs + 0.5) * strength) / mgkg;
+
+    out += `
+    • เม็ดละ ${strength} mg → <b>${tabs}</b> เม็ด 
+      (${(tabs * strength).toFixed(0)} mg)
+      <span class="small">
+      [ช่วงน้ำหนักประมาณ ${minW.toFixed(1)} – ${maxW.toFixed(1)} กก.]
+      </span><br>`;
   });
+
   return out + "<br>";
 }
 
-function calcFDC(w, mgPerTab, unit) {
+function calcFDC(w, mgPerTab) {
   let dose = w * 10;
   let tabs = preferWhole(dose / mgPerTab);
-  return `แนะนำ: ${tabs} ${unit} (${(tabs * mgPerTab).toFixed(0)} mg)<br>`;
+  return `แนะนำ: <b>${tabs}</b> เม็ด (${(tabs * mgPerTab).toFixed(0)} mg)<br>`;
 }
 </script>
 
