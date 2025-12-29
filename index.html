@@ -2,129 +2,169 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>คำนวณขนาดยาวัณโรค</title>
+<title>TB Drug Dose Calculator</title>
 <style>
-body { font-family: sans-serif; margin: 20px; }
-button { margin: 5px; padding: 8px 12px; }
-.result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-.small { color: #666; font-size: 0.9em; margin-top: 15px; }
+body{font-family:Arial;background:#f4f6f9;padding:30px}
+.container{max-width:900px;margin:auto;background:#fff;padding:25px;border-radius:10px}
+h2,h3{margin-top:25px}
+.drug{margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ccc}
+.alert{color:red;font-weight:bold}
+small{color:#555}
+button{padding:12px;margin:5px 0;background:#1976d2;color:#fff;border:none;border-radius:6px;width:100%}
+input{width:100%;padding:8px;margin:10px 0}
+.mode-btn{background:#555}
+.hidden{display:none}
+.col{display:inline-block;width:48%;vertical-align:top}
 </style>
 </head>
 
 <body>
+<div class="container">
+<h2>TB Drug Dose Calculator</h2>
 
-<h2>โปรแกรมคำนวณขนาดยาวัณโรค</h2>
+<button class="mode-btn" onclick="setMode('tb')">คำนวณขนาดยาวัณโรค</button>
+<button class="mode-btn" onclick="setMode('ltbi')">คำนวณขนาดยาวัณโรคแฝง (3HP)</button>
 
-<button onclick="showTB()">คำนวณขนาดยาวัณโรค</button>
-<button onclick="showLTBI()">คำนวณขนาดยาวัณโรคแฝง (3HP)</button>
+<div id="inputs" class="hidden">
+  <input type="number" id="age" placeholder="อายุ (ปี)" class="hidden">
+  <input type="number" id="weight" placeholder="น้ำหนัก (kg)">
+  <button onclick="calc()">คำนวณ</button>
+</div>
 
-<div id="inputArea"></div>
-<div id="result" class="result"></div>
+<div id="result"></div>
+  
+</div>
 
 <script>
-function showTB() {
-  document.getElementById("inputArea").innerHTML = `
-    <h3>วัณโรคปกติ</h3>
-    น้ำหนัก (kg): <input id="weight" type="number">
-    <button onclick="calcTB()">คำนวณ</button>
-  `;
-  document.getElementById("result").innerHTML = "";
+let mode="";
+
+function setMode(m){
+  mode=m;
+  document.getElementById("inputs").classList.remove("hidden");
+  document.getElementById("result").innerHTML="";
+  document.getElementById("weight").value="";
+  document.getElementById("age").value="";
+  document.getElementById("age").classList.toggle("hidden",m==="tb");
 }
 
-function showLTBI() {
-  document.getElementById("inputArea").innerHTML = `
-    <h3>วัณโรคแฝง (3HP)</h3>
-    อายุ (ปี): <input id="age" type="number"><br><br>
-    น้ำหนัก (kg): <input id="weight" type="number">
-    <button onclick="calc3HP()">คำนวณ</button>
-  `;
-  document.getElementById("result").innerHTML = "";
+function doseRange(w,min,max,maxDose){
+  let lo=w*min, hi=w*max;
+  return {
+    min:Math.round(Math.min(lo,maxDose)),
+    max:Math.round(Math.min(hi,maxDose))
+  };
 }
 
-function rangeText(min, max) {
-  return `${min} – ${max} mg`;
+function recommend(range,strength,maxDose){
+  let full=[], half=[];
+  for(let t=1;t<=10;t++){
+    let d=t*strength;
+    if(d>=range.min && d<=range.max && d<=maxDose) full.push(t);
+  }
+  if(full.length){
+    return `• ${full[0]}${full.at(-1)!==full[0]?` – ${full.at(-1)}`:""} เม็ด (${strength} mg/เม็ด)`;
+  }
+  for(let t=0.5;t<=10;t+=0.5){
+    if(Number.isInteger(t)) continue;
+    let d=t*strength;
+    if(d>=range.min && d<=range.max && d<=maxDose) half.push(t);
+  }
+  return half.length
+    ? `• ${half[0]} เม็ด (${strength} mg/เม็ด) ⚠ ต้องใช้ครึ่งเม็ด`
+    : `<span class="alert">⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>`;
 }
 
-function preferFullTablet(mg, strength) {
-  return Math.round(mg / strength);
+function fdcCalc(w,strengths){
+  for(let t=1;t<=10;t++){
+    let ok=true;
+    for(let d of strengths){
+      let dose=t*d.dose;
+      if(dose<d.min || dose>d.max) ok=false;
+    }
+    if(ok) return `ขนาดยาที่แนะนำ: ${t} เม็ด`;
+  }
+  for(let t=0.5;t<=10;t+=0.5){
+    if(Number.isInteger(t)) continue;
+    let ok=true;
+    for(let d of strengths){
+      let dose=t*d.dose;
+      if(dose<d.min || dose>d.max) ok=false;
+    }
+    if(ok) return `ขนาดยาที่แนะนำ: ${t} เม็ด ⚠ ต้องใช้ครึ่งเม็ด`;
+  }
+  return `<span class="alert">⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
 }
 
-/* ---------- TB ปกติ ---------- */
-function calcTB() {
-  const w = Number(document.getElementById("weight").value);
-  if (!w) return;
+function calc(){
+  let w=Number(document.getElementById("weight").value);
+  if(!w||w<=0){alert("กรอกน้ำหนัก");return;}
 
-  let I_min = 4 * w, I_max = 6 * w;
-  let R_min = 8 * w, R_max = 12 * w;
-  let Z_min = 20 * w, Z_max = 30 * w;
-  let E_min = 15 * w, E_max = 20 * w;
+  const H=doseRange(w,4,6,300);
+  const R=doseRange(w,8,12,600);
+  const Z=doseRange(w,20,30,2000);
+  const E=doseRange(w,15,20,1200);
 
-  let html = `<h3>ผลการคำนวณ (วัณโรคปกติ)</h3>`;
+  let html=`<h3>ยาแยกเม็ด (IRZE)</h3>`;
 
-  html += `
-<b>Isoniazid (I)</b><br>
-ขนาดยาที่คำนวณได้: ${rangeText(I_min, I_max)}/day<br>
-แนะนำรับประทาน: ${preferFullTablet(I_min,100)}–${preferFullTablet(I_max,100)} เม็ด (100 mg/เม็ด)<br><br>
+  html+=`
+  <div class="drug">
+  <b>Isoniazid (H) 4–6 mg/kg/day</b><br>
+  ขนาดยาที่คำนวณได้: ${H.min} – ${H.max} mg/day<br>
+  ${recommend(H,100,300)}
+  </div>`;
 
-<b>Rifampin (R)</b><br>
-ขนาดยาที่คำนวณได้: ${rangeText(R_min, R_max)}/day<br>
-• เม็ด 300 mg: ${preferFullTablet(R_min,300)}–${preferFullTablet(R_max,300)} เม็ด<br>
-• เม็ด 450 mg: ${preferFullTablet(R_min,450)}–${preferFullTablet(R_max,450)} เม็ด<br><br>
+  html+=`
+  <div class="drug">
+  <b>Rifampicin (R) 8–12 mg/kg/day</b><br>
+  ขนาดยาที่คำนวณได้: ${R.min} – ${R.max} mg/day<br>
+  <div class="col">${recommend(R,300,600)}</div>
+  <div class="col">${recommend(R,450,600)}</div>
+  </div>`;
 
-<b>Pyrazinamide (Z)</b><br>
-ขนาดยาที่คำนวณได้: ${rangeText(Z_min, Z_max)}/day<br>
-แนะนำรับประทาน: ${preferFullTablet(Z_min,500)}–${preferFullTablet(Z_max,500)} เม็ด (500 mg/เม็ด)<br><br>
+  html+=`
+  <div class="drug">
+  <b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
+  ขนาดยาที่คำนวณได้: ${Z.min} – ${Z.max} mg/day<br>
+  ${recommend(Z,500,2000)}
+  </div>`;
 
-<b>Ethambutol (E)</b><br>
-ขนาดยาที่คำนวณได้: ${rangeText(E_min, E_max)}/day<br>
-• เม็ด 400 mg: ${preferFullTablet(E_min,400)}–${preferFullTablet(E_max,400)} เม็ด<br>
-• เม็ด 500 mg: ${preferFullTablet(E_min,500)}–${preferFullTablet(E_max,500)} เม็ด<br>
-`;
+  html+=`
+  <div class="drug">
+  <b>Ethambutol (E) 15–20 mg/kg/day</b><br>
+  ขนาดยาที่คำนวณได้: ${E.min} – ${E.max} mg/day<br>
+  <div class="col">${recommend(E,500,1200)}</div>
+  <div class="col">${recommend(E,400,1200)}</div>
+  <span class="alert">⚠ max dose 1200 mg</span>
+  </div>`;
 
-  html += `
-<div class="small">
-⚠️ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้  
-ไม่ทดแทนดุลยพินิจแพทย์
-</div>
-`;
+  html+=`
+  <h3>ยาเม็ดรวม (FDC)</h3>
+  <div class="drug">
+  <b>2FDC</b> (isoniazid 75 mg + rifampicin 150 mg)<br>
+  ${fdcCalc(w,[
+    {dose:75,min:H.min,max:H.max},
+    {dose:150,min:R.min,max:R.max}
+  ])}
+  </div>
 
-  document.getElementById("result").innerHTML = html;
-}
+  <div class="drug">
+  <b>4FDC</b> (isoniazid 75 mg + rifampicin 150 mg + pyrazinamide 400 mg + ethambutol 275 mg)<br>
+  ${fdcCalc(w,[
+    {dose:75,min:H.min,max:H.max},
+    {dose:150,min:R.min,max:R.max},
+    {dose:400,min:Z.min,max:Z.max},
+    {dose:275,min:E.min,max:E.max}
+  ])}
+  </div>`;
 
-/* ---------- TB แฝง 3HP ---------- */
-function calc3HP() {
-  const w = Number(document.getElementById("weight").value);
-  const age = Number(document.getElementById("age").value);
-  if (!w || !age) return;
+  html+=`
+  <small>
+  ⚠ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้<br>
+  ไม่ทดแทนดุลยพินิจแพทย์
+  </small>`;
 
-  let INH = 15 * w; if (INH > 900) INH = 900;
-  let RPT = 10 * w; if (RPT > 900) RPT = 900;
-
-  let html = `<h3>ผลการคำนวณ (วัณโรคแฝง : 3HP)</h3>`;
-
-  html += `
-<b>Isoniazid (INH)</b><br>
-ขนาดยาที่คำนวณได้: ≤ ${INH} mg/ครั้ง<br>
-แนะนำรับประทาน: ${preferFullTablet(INH,300)} เม็ด (300 mg/เม็ด)<br><br>
-
-<b>Rifapentine (RPT)</b><br>
-ขนาดยาที่คำนวณได้: ≤ ${RPT} mg/ครั้ง<br>
-แนะนำรับประทาน: ${preferFullTablet(RPT,150)} เม็ด (150 mg/เม็ด)<br><br>
-
-<b>วิธีรับประทาน</b><br>
-รับประทาน <b>1 ครั้ง/สัปดาห์ เป็นเวลา 12 สัปดาห์</b>
-`;
-
-  html += `
-<div class="small">
-⚠️ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้  
-ไม่ทดแทนดุลยพินิจแพทย์
-</div>
-`;
-
-  document.getElementById("result").innerHTML = html;
+  document.getElementById("result").innerHTML=html;
 }
 </script>
-
 </body>
 </html>
