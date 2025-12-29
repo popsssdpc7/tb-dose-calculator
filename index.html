@@ -2,20 +2,19 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>TB Drug Dose Calculator</title>
+<title>TB Dose Calculator</title>
 <style>
-body { font-family: Arial, sans-serif; background:#f5f7fa; padding:20px; }
-.container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
-h2,h3 { text-align:center; }
-.drug { margin-bottom:18px; padding-bottom:12px; border-bottom:1px dashed #ccc; }
-.note { color:#555; font-size:0.9em; }
-.warn { margin-top:20px; color:darkred; font-weight:bold; }
+body { font-family: Arial, sans-serif; background:#f4f6f9; padding:20px; }
+.container { max-width:720px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
+.drug { margin-bottom:18px; padding-bottom:12px; border-bottom:1px dashed #bbb; }
+.note { font-size:0.9em; color:#555; }
+.warn { margin-top:25px; color:darkred; font-weight:bold; }
 </style>
 </head>
 
 <body>
 <div class="container">
-<h2>คำนวณขนาดยาวัณโรค</h2>
+<h2>คำนวณขนาดยาวัณโรค (ยาแยกเม็ด)</h2>
 
 น้ำหนัก (kg):
 <input type="number" id="weight">
@@ -26,8 +25,8 @@ h2,h3 { text-align:center; }
 
 <script>
 function drugBlock(name, w, minMgKg, maxMgKg, strengths) {
-  let minDose = w * minMgKg;
-  let maxDose = w * maxMgKg;
+  const minDose = w * minMgKg;
+  const maxDose = w * maxMgKg;
 
   let html = `<div class="drug">
   <b>${name}</b> ${minMgKg}–${maxMgKg} mg/kg/day<br>
@@ -35,15 +34,20 @@ function drugBlock(name, w, minMgKg, maxMgKg, strengths) {
   <b>คำแนะนำ:</b><br>`;
 
   strengths.forEach(s => {
-    let minTabs = Math.ceil(minDose / s);
-    let maxTabs = Math.floor(maxDose / s);
+    const minTabs = Math.ceil(minDose / s);
+    const maxTabs = Math.floor(maxDose / s);
 
     if (minTabs <= maxTabs) {
-      html += `• ${minTabs} – ${maxTabs} เม็ด (${s} mg/tab)<br>`;
+      html += `• ${minTabs} – ${maxTabs} เม็ด (${s} mg/เม็ด)<br>`;
     } else {
-      let halfTabs = Math.round((minDose / s) * 2) / 2;
-      let actual = halfTabs * s;
-      html += `• ไม่สามารถจัดเป็นเม็ดเต็มได้ → อาจพิจารณา ${halfTabs} เม็ด (${actual.toFixed(0)} mg)<br>`;
+      const halfTabs = Math.round((minDose / s) * 2) / 2;
+      const actual = halfTabs * s;
+
+      if (actual >= minDose && actual <= maxDose) {
+        html += `• ไม่มีเม็ดเต็มที่ลงตัว → อาจพิจารณา ${halfTabs} เม็ด (${s} mg/เม็ด)<br>`;
+      } else {
+        html += `• ไม่สามารถจัดขนาดยาให้เหมาะสมด้วยความแรง ${s} mg<br>`;
+      }
     }
   });
 
@@ -60,7 +64,7 @@ function calculate() {
     return;
   }
 
-  let html = `<h3>ยาแยกเม็ด</h3>`;
+  let html = "";
 
   html += drugBlock("Isoniazid (I)", w, 4, 6, [100]);
   html += drugBlock("Rifampicin (R)", w, 8, 12, [300, 450]);
@@ -69,7 +73,7 @@ function calculate() {
 
   html += `<div class="warn">
   ⚠ โปรแกรมอาจคำนวณผิดพลาดได้ กรุณาตรวจสอบก่อนนำไปใช้  
-  ไม่ทดแทนดุลยพินิจแพทย์
+  ไม่สามารถใช้ทดแทนดุลยพินิจแพทย์
   </div>`;
 
   document.getElementById("result").innerHTML = html;
