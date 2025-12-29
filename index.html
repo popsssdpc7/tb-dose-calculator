@@ -19,7 +19,7 @@ input{width:100%;padding:8px;margin:10px 0}
 <div class="container">
 <h2>คำนวณขนาดยาวัณโรค</h2>
 
-<input type="number" id="age" placeholder="อายุ (ปี)">
+<input type="number" id="age" placeholder="อายุ (ปี) — ใช้สำหรับวัณโรคแฝง">
 <input type="number" id="weight" placeholder="น้ำหนัก (kg)">
 <button onclick="calc()">คำนวณ</button>
 
@@ -28,28 +28,23 @@ input{width:100%;padding:8px;margin:10px 0}
 
 <script>
 function doseRange(w,min,max,maxDose){
-  let lo=w*min, hi=w*max;
   return {
-    min:Math.round(Math.min(lo,maxDose)),
-    max:Math.round(Math.min(hi,maxDose))
+    min:Math.round(Math.min(w*min,maxDose)),
+    max:Math.round(Math.min(w*max,maxDose))
   };
 }
 
 function recommend(range,strength,maxDose){
-  let best=null;
   for(let t=1;t<=10;t++){
     let d=t*strength;
     if(d>=range.min && d<=range.max && d<=maxDose){
-      best=`${t} เม็ด (${d} mg)`;
-      break;
+      return `• แนะนำ: ${t} เม็ด (${d} mg)`;
     }
   }
-  if(best) return "• แนะนำ: "+best;
-
   for(let t=0.5;t<=10;t+=0.5){
     let d=t*strength;
     if(d>=range.min && d<=range.max && d<=maxDose){
-      return "• ทางเลือก: "+t+" เม็ด ("+d+" mg)";
+      return `• ทางเลือก: ${t} เม็ด (${d} mg)`;
     }
   }
   return "<span class='alert'>⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>";
@@ -57,25 +52,25 @@ function recommend(range,strength,maxDose){
 
 function fdcCalc(w,drugs){
   for(let t=1;t<=10;t++){
-    let ok=true;
-    for(let d of drugs){
+    if(drugs.every(d=>{
       let total=t*d.dose;
-      if(total<d.min || total>d.max) ok=false;
-    }
-    if(ok) return "แนะนำ: "+t+" เม็ด";
+      return total>=d.min && total<=d.max;
+    })) return `แนะนำ: ${t} เม็ด`;
   }
   for(let t=0.5;t<=10;t+=0.5){
-    let ok=true;
-    for(let d of drugs){
+    if(drugs.every(d=>{
       let total=t*d.dose;
-      if(total<d.min || total>d.max) ok=false;
-    }
-    if(ok) return "ทางเลือก: "+t+" เม็ด";
+      return total>=d.min && total<=d.max;
+    })) return `ทางเลือก: ${t} เม็ด`;
   }
   return "<span class='alert'>⚠ ไม่เหมาะสมกับช่วงน้ำหนักนี้</span>";
 }
 
 function ltbiCalc(age,w){
+  if(!age||age<=0){
+    return "<span class='alert'>⚠ กรุณากรอกอายุเพื่อคำนวณวัณโรคแฝง</span>";
+  }
+
   let inh=0, rpt=0;
 
   if(age>=2 && age<=14){
@@ -83,22 +78,13 @@ function ltbiCalc(age,w){
     else if(w<=23){inh=500; rpt=450;}
     else if(w<=30){inh=600; rpt=600;}
     else{inh=700; rpt=750;}
-  }else if(age>14){
+  }else{
     inh=Math.ceil((w*15)/100)*100;
     if(inh>900) inh=900;
-    rpt = w<=50 ? 750 : 900;
-  }else{
-    return "<span class='alert'>⚠ อายุไม่เข้าเกณฑ์</span>";
+    rpt=w<=50?750:900;
   }
 
-  let tabsINH=inh/300;
-  let tabsRPT=rpt/300;
-
-  let tabs=Math.max(tabsINH,tabsRPT);
-
-  if(Math.abs(tabs*300-inh)>1 || Math.abs(tabs*300-rpt)>1){
-    return "<span class='alert'>⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>";
-  }
+  let tabs=Math.max(inh/300,rpt/300);
 
   if(tabs%0.5!==0){
     return "<span class='alert'>⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>";
@@ -115,7 +101,8 @@ function ltbiCalc(age,w){
 function calc(){
   let w=+document.getElementById("weight").value;
   let age=+document.getElementById("age").value;
-  if(!w||!age){alert("กรอกอายุและน้ำหนัก");return;}
+
+  if(!w||w<=0){alert("กรุณากรอกน้ำหนัก");return;}
 
   const H=doseRange(w,4,6,300);
   const R=doseRange(w,8,12,600);
@@ -125,50 +112,40 @@ function calc(){
   let html=`<h3>1) ยาแยกเม็ด (IRZE)</h3>`;
 
   html+=`
-  <div class="drug"><b>Isoniazid (H)</b><br>
-  ${H.min}–${H.max} mg/day<br>
-  • 100 mg/tab<br>${recommend(H,100,300)}
-  </div>`;
+  <div class="drug"><b>Isoniazid</b><br>${H.min}–${H.max} mg<br>
+  • 100 mg/tab<br>${recommend(H,100,300)}</div>`;
 
   html+=`
-  <div class="drug"><b>Rifampicin (R)</b><br>
-  ${R.min}–${R.max} mg/day<br>
+  <div class="drug"><b>Rifampicin</b><br>${R.min}–${R.max} mg<br>
   • 300 mg/tab<br>${recommend(R,300,600)}<br>
-  • 450 mg/tab<br>${recommend(R,450,600)}
-  </div>`;
+  • 450 mg/tab<br>${recommend(R,450,600)}</div>`;
 
   html+=`
-  <div class="drug"><b>Pyrazinamide (Z)</b><br>
-  ${Z.min}–${Z.max} mg/day<br>
-  • 500 mg/tab<br>${recommend(Z,500,2000)}
-  </div>`;
+  <div class="drug"><b>Pyrazinamide</b><br>${Z.min}–${Z.max} mg<br>
+  • 500 mg/tab<br>${recommend(Z,500,2000)}</div>`;
 
   html+=`
-  <div class="drug"><b>Ethambutol (E)</b><br>
-  ${E.min}–${E.max} mg/day<br>
+  <div class="drug"><b>Ethambutol</b><br>${E.min}–${E.max} mg<br>
   • 400 mg/tab<br>${recommend(E,400,1200)}<br>
-  • 500 mg/tab<br>${recommend(E,500,1200)}
-  </div>`;
+  • 500 mg/tab<br>${recommend(E,500,1200)}</div>`;
 
   html+=`<h3>2) ยาเม็ดรวม (FDC)</h3>`;
 
   html+=`
-  <div class="drug"><b>2FDC</b> (H75 + R150)<br>
+  <div class="drug"><b>2FDC</b><br>
   ${fdcCalc(w,[
     {dose:75,min:H.min,max:H.max},
     {dose:150,min:R.min,max:R.max}
-  ])}
-  </div>`;
+  ])}</div>`;
 
   html+=`
-  <div class="drug"><b>4FDC</b> (H75 + R150 + Z400 + E275)<br>
+  <div class="drug"><b>4FDC</b><br>
   ${fdcCalc(w,[
     {dose:75,min:H.min,max:H.max},
     {dose:150,min:R.min,max:R.max},
     {dose:400,min:Z.min,max:Z.max},
     {dose:275,min:E.min,max:E.max}
-  ])}
-  </div>`;
+  ])}</div>`;
 
   html+=`<h3>3) วัณโรคแฝง (3HP)</h3>
   <div class="drug">
