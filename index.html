@@ -33,9 +33,14 @@ function tabs(total, per) {
 }
 
 function calc() {
-  const age = +ageInput.value;
-  const w = +weight.value;
-  if (!w) return;
+  const age = Number(document.getElementById("age").value);
+  const w   = Number(document.getElementById("weight").value);
+  const out = document.getElementById("out");
+
+  if (!w || w <= 0) {
+    alert("กรุณากรอกน้ำหนักให้ถูกต้อง");
+    return;
+  }
 
   let html = "";
 
