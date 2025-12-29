@@ -3,133 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <title>TB Drug Dose Calculator</title>
+
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-.box { border:1px solid #ccc; padding:15px; margin-top:20px; border-radius:8px;}
-.warn { color:red; font-weight:bold; }
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6f9;
+    padding:30px;
+}
+.container{
+    max-width:800px;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+h2,h3{
+    text-align:center;
+}
+label{font-weight:bold;}
+input,select{
+    width:100%;
+    padding:8px;
+    margin:10px 0 20px;
+    font-size:16px;
+}
+button{
+    width:100%;
+    padding:12px;
+    background:#1976d2;
+    color:white;
+    border:none;
+    border-radius:6px;
+    font-size:16px;
+    cursor:pointer;
+}
+.result{
+    margin-top:25px;
+    padding:15px;
+    background:#eef3f8;
+    border-radius:8px;
+}
+.drug{
+    margin-bottom:18px;
+    padding-bottom:10px;
+    border-bottom:1px dashed #bbb;
+}
+.alert{color:red;font-weight:bold;}
+.note{font-size:13px;color:#555;margin-top:15px;}
+.section{margin-top:35px;}
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<h1>โปรแกรมคำนวณขนาดยาวัณโรค</h1>
+<h2>คำนวณขนาดยาวัณโรค</h2>
 
-อายุ (ปี):
-<input type="number" id="age" value="30"><br><br>
+<label>น้ำหนัก (kg)</label>
+<input type="number" id="weight" min="1">
 
-น้ำหนัก (kg):
-<input type="number" id="weight" value="30"><br><br>
+<label>อายุ (ปี)</label>
+<input type="number" id="age" min="1">
 
-<button onclick="calculate()">คำนวณ</button>
+<button onclick="calculateAll()">คำนวณ</button>
 
-<div id="result"></div>
+<div id="result" class="result" style="display:none;"></div>
+
+</div>
 
 <script>
-function roundHalf(mg, tablet){
-    return Math.ceil(mg / (tablet/2)) * (tablet/2);
+function calcRange(w,min,max see,maxDose){
+    let lo=w*min, hi=w*max;
+    return {
+        min:Math.round(lo),
+        max:Math.round(Math.min(hi,maxDose)),
+        exceed:hi>maxDose
+    };
 }
 
-function calculate(){
-    const age = Number(document.getElementById("age").value);
-    const wt = Number(document.getElementById("weight").value);
-    let html = "";
+function bestTablet(minDose,maxDose,strength,maxDoseAbs){
+    let best=null;
+    let mid=(minDose+maxDose)/2;
+    for(let t=0.5;t<=10;t+=0.5){
+        let d=t*strength;
+        if(d<minDose||d>maxDose||d>maxDoseAbs)continue;
+        let diff=Math.abs(d-mid);
+        if(!best||diff<best.diff)best={t,d,diff};
+    }
+    return best;
+}
 
-    /* ================= IRZE (ยาแยก) ================= */
-    html += `<div class="box"><h2>IRZE (ยาแยก)</h2>`;
+function calculateAll(){
+    let w=+document.getElementById("weight").value;
+    let age=+document.getElementById("age").value;
+    if(!w||!age){alert("กรอกน้ำหนักและอายุ");return;}
 
-    const drugs = [
-        {n:"Isoniazid (H)", min:5, max:10, tab:300},
-        {n:"Rifampicin (R)", min:10, max:20, tab:300},
-        {n:"Pyrazinamide (Z)", min:20, max:30, tab:500},
-        {n:"Ethambutol (E)", min:15, max:20, tab:400}
-    ];
+    let H=calcRange(w,4,6,300);
+    let R=calcRange(w,8,12,600);
+    let Z=calcRange(w,20,30,2000);
+    let E=calcRange(w,15,20,1200);
 
-    drugs.forEach(d=>{
-        const min = d.min*wt;
-        const max = d.max*wt;
-        let rec = roundHalf(min, d.tab);
-        html += `
-        <b>${d.n}</b><br>
-        ขนาดที่คำนวณได้: ${Math.round(min)}–${Math.round(max)} mg/day<br>
-        ขนาดแนะนำ: ${rec} mg (${rec/d.tab} เม็ด)<br><br>`;
-    });
-    html += `</div>`;
+    let html="";
 
-    /* ================= 2FDC (HR) ================= */
-    html += `<div class="box"><h2>2FDC (HR)</h2>
-    <p>1 เม็ด = H 75 mg + R 150 mg</p>`;
+    function drug(name,range,opts=[]){
+        html+=`<div class="drug"><b>${name}</b><br>
+        ${range.min} – ${range.max} mg/day<br>`;
+        opts.forEach(o=>{
+            let b=bestTablet(range.min,range.max,o.str,o.max);
+            if(b){
+                html+=`• ${b.t} เม็ด (${o.str} mg) = ${b.d} mg<br>`;
+            }
+        });
+        if(range.exceed)html+=`<span class="alert">⚠ max dose</span>`;
+        html+="</div>";
+    }
 
-    let hNeed = 5 * wt;
-    let rNeed = 10 * wt;
-    let tabs2 = Math.ceil(Math.max(hNeed/75, rNeed/150));
-    let hGive = tabs2*75;
-    let rGive = tabs2*150;
+    drug("Isoniazid (H) 4–6 mg/kg/day",H,[{str:100,max:300}]);
+    drug("Rifampicin (R) 8–12 mg/kg/day",R,[{str:300,max:600},{str:450,max:600}]);
+    drug("Pyrazinamide (Z) 20–30 mg/kg/day",Z,[{str:500,max:2000}]);
+    drug("Ethambutol (E) 15–20 mg/kg/day",E,[{str:500,max:1200},{str:400,max:1200}]);
 
-    html += `
-    ขนาดที่คำนวณได้: H ${Math.round(hNeed)} mg, R ${Math.round(rNeed)} mg<br>
-    ขนาดแนะนำ: ${tabs2} เม็ด/วัน<br>
-    (H ${hGive} mg + R ${rGive} mg)
-    </div>`;
+    html+=`<div class="drug"><b>2FDC (H75 + R150)</b><br>
+    แนะนำตามขนาด R</div>
+    <div class="drug"><b>4FDC (H75 + R150 + Z400 + E275)</b><br>
+    ใช้ตาม weight band</div>`;
 
-    /* ================= 4FDC (HRZE) ================= */
-    html += `<div class="box"><h2>4FDC (HRZE)</h2>
-    <p>1 เม็ด = H 75 mg + R 150 mg + Z 400 mg + E 275 mg</p>`;
-
-    let zNeed = 20 * wt;
-    let eNeed = 15 * wt;
-
-    let tabs4 = Math.ceil(Math.max(
-        hNeed/75,
-        rNeed/150,
-        zNeed/400,
-        eNeed/275
-    ));
-
-    html += `
-    ขนาดที่คำนวณได้:<br>
-    H ${Math.round(hNeed)} mg, R ${Math.round(rNeed)} mg,
-    Z ${Math.round(zNeed)} mg, E ${Math.round(eNeed)} mg<br><br>
-
-    ขนาดแนะนำ: ${tabs4} เม็ด/วัน<br>
-    (H ${tabs4*75} + R ${tabs4*150} + Z ${tabs4*400} + E ${tabs4*275} mg)
-    </div>`;
-
-    /* ================= 3HP ================= */
-    html += `<div class="box"><h2>วัณโรคแฝง (3HP)</h2>
-    <p>1 เม็ด = INH 300 mg + Rifapentine 300 mg</p>`;
-
-    let inhCalc=0, rptCalc=0, warn="";
-
-    if(age>=2 && age<=14){
-        if(wt<=15){inhCalc=300;rptCalc=300;}
-        else if(wt<=23){inhCalc=500;rptCalc=450;}
-        else if(wt<=30){inhCalc=600;rptCalc=600;}
-        else{inhCalc=700;rptCalc=750;}
+    html+=`<div class="section"><h3>วัณโรคแฝง (3HP)</h3>`;
+    let note=false;
+    if(age<=14){
+        if(w<=15)html+=`300/300 mg`;
+        else if(w<=23)html+=`500/450 mg`;
+        else if(w<=30)html+=`600/600 mg`;
+        else html+=`700/750 mg`;
     }else{
-        inhCalc=Math.ceil((15*wt)/100)*100;
-        if(inhCalc>900) inhCalc=900;
-        rptCalc = wt<=50 ? 750 : 900;
+        let inh=Math.min(Math.ceil(w*15/100)*100,900);
+        let rfp=w<=50?750:900;
+        let tabs=Math.round(Math.max(inh,rfp)/300);
+        if(tabs*300>inh||tabs*300>rfp)note=true;
+        html+=`INH ${inh} mg + Rifapentine ${rfp} mg<br>
+        แนะนำ ${tabs} เม็ด/สัปดาห์`;
     }
+    if(note)html+=`<br><span class="alert">โปรดใช้ดุลยพินิจในการตัดสินใจ</span>`;
+    html+=`</div>`;
 
-    let tabs = Math.max(
-        Math.ceil(inhCalc/300),
-        Math.ceil(rptCalc/300)
-    );
-
-    if(tabs*300>inhCalc || tabs*300>rptCalc){
-        warn = `<div class="warn">⚠️ โปรดใช้ดุลยพินิจในการตัดสินใจ</div>`;
-    }
-
-    html += `
-    ขนาดที่คำนวณได้: INH ${inhCalc} mg, Rifapentine ${rptCalc} mg<br>
-    ขนาดแนะนำ: ${tabs} เม็ด/สัปดาห์<br>
-    (INH ${tabs*300} + Rifapentine ${tabs*300} mg)
-    ${warn}
+    html+=`<div class="note">
+    ⚠ การคำนวณอาจผิดพลาดได้ กรุณาตรวจสอบข้อมูลก่อนนำไปใช้
     </div>`;
 
-    document.getElementById("result").innerHTML = html;
+    document.getElementById("result").style.display="block";
+    document.getElementById("result").innerHTML=html;
 }
 </script>
-
 </body>
 </html>
