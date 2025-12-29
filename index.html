@@ -8,6 +8,7 @@ body { font-family: Arial, sans-serif; margin: 30px; }
 .box { border: 1px solid #ccc; padding: 15px; margin-top: 20px; }
 .warn { color: red; font-weight: bold; }
 .footer { margin-top: 40px; border-top: 2px solid #ccc; padding-top: 10px; color: #b00000; }
+h2 { margin-top: 0; }
 </style>
 </head>
 
@@ -29,33 +30,36 @@ body { font-family: Arial, sans-serif; margin: 30px; }
 </div>
 
 <script>
+// ===============================
+// ฟังก์ชันเลือกจำนวนเม็ด
+// เต็มเม็ด > ครึ่งเม็ด
+// ===============================
 function recommendTablet(minMg, maxMg, tabMg) {
-  let full = null;
-  let half = null;
 
+  // 1) เต็มเม็ดก่อน
   for (let t = 1; t <= 10; t++) {
     const dose = t * tabMg;
     if (dose >= minMg && dose <= maxMg) {
-      full = t;
-      break;
+      return `แนะนำ: ${t} เม็ด (${dose} mg)`;
     }
   }
 
-  if (!full) {
-    for (let t = 0.5; t <= 10; t += 0.5) {
-      const dose = t * tabMg;
-      if (dose >= minMg && dose <= maxMg) {
-        half = t;
-        break;
-      }
+  // 2) ครึ่งเม็ด (ใช้เมื่อจำเป็น)
+  for (let t = 0.5; t <= 10; t += 0.5) {
+    if (Number.isInteger(t)) continue;
+    const dose = t * tabMg;
+    if (dose >= minMg && dose <= maxMg) {
+      return `แนะนำ: ${t} เม็ด (${dose} mg)`;
     }
   }
 
-  if (full) return `${full} เม็ด`;
-  if (half) return `${half} เม็ด`;
-  return "ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้";
+  // 3) ไม่มีทางเลือก
+  return `<span class="warn">ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
 }
 
+// ===============================
+// MAIN
+// ===============================
 function calculate() {
   const age = +document.getElementById("age").value;
   const wt = +document.getElementById("weight").value;
@@ -63,56 +67,83 @@ function calculate() {
 
   let o = "";
 
-  /* I */
-  const Imin = wt * 4, Imax = wt * 6;
-  const Irec = recommendTablet(Imin, Imax, 300);
+  /* =========================
+     1) แยกเม็ดยา I / R / Z / E
+     ========================= */
 
-  /* R */
-  const Rmin = wt * 8, Rmax = wt * 12;
+  // Isoniazid (100 mg/tab)
+  const Imin = wt * 4;
+  const Imax = wt * 6;
+  const Irec = recommendTablet(Imin, Imax, 100);
+
+  // Rifampicin (300 mg/tab)
+  const Rmin = wt * 8;
+  const Rmax = wt * 12;
   const Rrec = recommendTablet(Rmin, Rmax, 300);
 
-  /* Z */
-  const Zmin = wt * 20, Zmax = Math.min(wt * 30, 2000);
+  // Pyrazinamide (500 mg/tab, max 2000)
+  const Zmin = wt * 20;
+  const Zmax = Math.min(wt * 30, 2000);
   const Zrec = recommendTablet(Zmin, Zmax, 500);
 
-  /* E */
-  const Emin = wt * 15, Emax = Math.min(wt * 20, 1200);
+  // Ethambutol (500 mg/tab, max 1200)
+  const Emin = wt * 15;
+  const Emax = Math.min(wt * 20, 1200);
   const Erec = recommendTablet(Emin, Emax, 500);
 
   o += `
   <div class="box">
   <h2>1) แยกเม็ดยา I / R / Z / E</h2>
-  <b>Isoniazid (4–6 mg/kg)</b><br>${Imin}-${Imax} mg → ${Irec}<br><br>
-  <b>Rifampicin (8–12 mg/kg)</b><br>${Rmin}-${Rmax} mg → ${Rrec}<br><br>
-  <b>Pyrazinamide (20–30 mg/kg)</b><br>${Zmin}-${Zmax} mg → ${Zrec}<br><br>
-  <b>Ethambutol (15–20 mg/kg)</b><br>${Emin}-${Emax} mg → ${Erec}
+
+  <b>Isoniazid (H) 4–6 mg/kg/day</b><br>
+  ${Imin.toFixed(0)} – ${Imax.toFixed(0)} mg/day<br>
+  เม็ดละ 100 mg → ${Irec}<br><br>
+
+  <b>Rifampicin (R) 8–12 mg/kg/day</b><br>
+  ${Rmin.toFixed(0)} – ${Rmax.toFixed(0)} mg/day<br>
+  เม็ดละ 300 mg → ${Rrec}<br><br>
+
+  <b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
+  ${Zmin.toFixed(0)} – ${Zmax.toFixed(0)} mg/day (max 2,000 mg)<br>
+  เม็ดละ 500 mg → ${Zrec}<br><br>
+
+  <b>Ethambutol (E) 15–20 mg/kg/day</b><br>
+  ${Emin.toFixed(0)} – ${Emax.toFixed(0)} mg/day (max 1,200 mg)<br>
+  เม็ดละ 500 mg → ${Erec}
   </div>
   `;
 
-  /* 2FDC */
-  const R2min = Rmin, R2max = Rmax;
-  const FDC2 = recommendTablet(R2min, R2max, 150);
+  /* =========================
+     2) 2FDC
+     ========================= */
+  const FDC2 = recommendTablet(Rmin, Rmax, 150);
 
   o += `
   <div class="box">
-  <h2>2) 2FDC (H75 + R150)</h2>
-  แนะนำ: ${FDC2}
+  <h2>2) 2FDC</h2>
+  1 เม็ด = Isoniazid 75 mg + Rifampicin 150 mg<br>
+  คำนวณตาม R → ${FDC2}
   </div>
   `;
 
-  /* 4FDC */
-  const Z4min = Zmin, Z4max = Zmax;
-  const FDC4 = recommendTablet(Z4min, Z4max, 400);
+  /* =========================
+     3) 4FDC
+     ========================= */
+  const FDC4 = recommendTablet(Zmin, Zmax, 400);
 
   o += `
   <div class="box">
   <h2>3) 4FDC</h2>
-  แนะนำ: ${FDC4}
+  1 เม็ด = H75 + R150 + Z400 + E275 mg<br>
+  คำนวณตาม Z → ${FDC4}
   </div>
   `;
 
-  /* 3HP */
+  /* =========================
+     4) วัณโรคแฝง 3HP
+     ========================= */
   let inh = 0, rpt = 0;
+
   if (age <= 14) {
     if (wt <= 15) { inh = 300; rpt = 300; }
     else if (wt <= 23) { inh = 500; rpt = 450; }
@@ -123,13 +154,18 @@ function calculate() {
     rpt = wt <= 50 ? 750 : 900;
   }
 
-  const HP = recommendTablet(Math.max(inh, rpt), Math.max(inh, rpt), 300);
+  const HPmin = Math.max(inh, rpt);
+  const HPrec = recommendTablet(HPmin, HPmin, 300);
 
   o += `
   <div class="box">
   <h2>4) วัณโรคแฝง (3HP)</h2>
-  INH ${inh} mg + Rifapentine ${rpt} mg<br>
-  แนะนำ: ${HP} / สัปดาห์
+  1 เม็ด = INH 300 mg + Rifapentine 300 mg<br><br>
+  ขนาดยาที่คำนวณได้:<br>
+  • INH ${inh} mg<br>
+  • Rifapentine ${rpt} mg<br><br>
+  ${HPrec}<br>
+  <small>(รับประทานสัปดาห์ละครั้ง)</small>
   </div>
   `;
 
