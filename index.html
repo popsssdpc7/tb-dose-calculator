@@ -6,10 +6,9 @@
 <style>
 body{font-family:Arial;background:#f4f6f9;padding:30px}
 .container{max-width:900px;margin:auto;background:#fff;padding:25px;border-radius:10px}
-h2,h3{margin-top:25px}
+h2,h3{margin-top:20px}
 .drug{margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ccc}
 .alert{color:red;font-weight:bold}
-small{color:#555}
 button{width:100%;padding:12px;background:#1976d2;color:#fff;border:none;border-radius:6px;margin-top:10px}
 input,select{width:100%;padding:8px;margin:10px 0}
 .hidden{display:none}
@@ -18,7 +17,7 @@ input,select{width:100%;padding:8px;margin:10px 0}
 
 <body>
 <div class="container">
-<h2>คำนวณขนาดยาวัณโรค</h2>
+<h2>เครื่องมือคำนวณขนาดยาวัณโรค</h2>
 
 <select id="mode" onchange="switchMode()">
   <option value="tb">คำนวณขนาดยาวัณโรค</option>
@@ -35,18 +34,20 @@ input,select{width:100%;padding:8px;margin:10px 0}
 
 <script>
 function switchMode(){
-  document.getElementById("age").classList.toggle(
-    "hidden",
-    document.getElementById("mode").value==="tb"
-  );
+  const isLTBI = document.getElementById("mode").value==="ltbi";
+  document.getElementById("age").classList.toggle("hidden", !isLTBI);
+  document.getElementById("result").innerHTML="";
 }
 
 function round100(x){
   return Math.ceil(x/100)*100;
 }
 
+function validTab(x){
+  return Number.isInteger(x) || Number.isInteger(x*2);
+}
+
 function calcLTBI(age,w){
-  let html=`<h3>วัณโรคแฝง (3HP)</h3>`;
   let inh=0, rpt=0;
 
   if(age>=2 && age<=14){
@@ -54,41 +55,42 @@ function calcLTBI(age,w){
     else if(w<=23){inh=500; rpt=450;}
     else if(w<=30){inh=600; rpt=600;}
     else if(w>30){inh=700; rpt=750;}
-    else return failLTBI();
-  }else if(age>14){
+    else return renderFail();
+  }
+  else if(age>14){
     inh=Math.min(round100(w*15),900);
     rpt=(w<=50)?750:900;
-  }else{
-    return failLTBI();
+  }
+  else return renderFail();
+
+  const inhTab = inh/300;
+  const rptTab = rpt/300;
+
+  if(!validTab(inhTab) || !validTab(rptTab)){
+    return renderFail();
   }
 
-  let tabsINH=inh/300;
-  let tabsRPT=rpt/300;
-
-  if(!isValidTabs(tabsINH) || !isValidTabs(tabsRPT)){
-    return failLTBI();
-  }
-
-  html+=`
-  Isoniazid ${inh} mg = ${tabsINH} เม็ด<br>
-  Rifapentine ${rpt} mg = ${tabsRPT} เม็ด
+  return `
+  <h3>วัณโรคแฝง (3HP)</h3>
+  <div class="drug">
+    <b>ยาผสมต่อ 1 เม็ด:</b> INH 300 mg + Rifapentine 300 mg<br><br>
+    Isoniazid: ${inh} mg → <b>${inhTab} เม็ด</b><br>
+    Rifapentine: ${rpt} mg → <b>${rptTab} เม็ด</b>
+  </div>
   `;
-
-  return html;
 }
 
-function isValidTabs(x){
-  return Number.isInteger(x) || Number.isInteger(x*2);
-}
-
-function failLTBI(){
-  return `<span class="alert">⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
+function renderFail(){
+  return `
+  <h3>วัณโรคแฝง (3HP)</h3>
+  <span class="alert">⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>
+  `;
 }
 
 function calc(){
-  let w=parseFloat(document.getElementById("weight").value);
-  let age=parseFloat(document.getElementById("age").value);
-  let mode=document.getElementById("mode").value;
+  const w=parseFloat(document.getElementById("weight").value);
+  const age=parseFloat(document.getElementById("age").value);
+  const mode=document.getElementById("mode").value;
 
   if(!w||w<=0){alert("กรอกน้ำหนัก");return;}
   if(mode==="ltbi" && (!age||age<=0)){alert("กรอกอายุ");return;}
@@ -98,7 +100,7 @@ function calc(){
   if(mode==="ltbi"){
     html=calcLTBI(age,w);
   }else{
-    html="<h3>วัณโรค (drug-susceptible TB)</h3><small>คำนวณปกติ (ตามโค้ดเดิมของคุณ)</small>";
+    html="<h3>วัณโรค (TB ปกติ)</h3><small>ใช้สูตรเดิมของคุณ</small>";
   }
 
   document.getElementById("result").innerHTML=html;
