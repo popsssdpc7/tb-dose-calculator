@@ -5,7 +5,7 @@
 <title>TB Dose Calculator</title>
 <style>
 body { font-family: Arial, sans-serif; background:#f4f6f9; padding:20px; }
-.container { max-width:800px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
+.container { max-width:850px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
 .section { margin-top:25px; padding-top:15px; border-top:2px solid #ccc; }
 .drug { margin-bottom:15px; }
 .warn { margin-top:25px; color:darkred; font-weight:bold; }
@@ -31,10 +31,11 @@ body { font-family: Arial, sans-serif; background:#f4f6f9; padding:20px; }
 /* ======================
    Helper
 ======================*/
-function fullTabRange(minDose, maxDose, strength) {
-  const minTab = Math.ceil(minDose / strength);
-  const maxTab = Math.floor(maxDose / strength);
-  return (minTab <= maxTab) ? `${minTab} – ${maxTab}` : null;
+function tabText(minTab, maxTab, strength) {
+  if (minTab === maxTab) {
+    return `• ${minTab} เม็ด (${strength} mg/เม็ด)<br>`;
+  }
+  return `• ${minTab} – ${maxTab} เม็ด (${strength} mg/เม็ด)<br>`;
 }
 
 /* ======================
@@ -50,11 +51,13 @@ function drugBlock(name, w, minMgKg, maxMgKg, strengths) {
   <b>คำแนะนำ:</b><br>`;
 
   strengths.forEach(s => {
-    const range = fullTabRange(minDose, maxDose, s);
-    if (range) {
-      html += `• ${range} เม็ด (${s} mg/เม็ด)<br>`;
+    const minTab = Math.ceil(minDose / s);
+    const maxTab = Math.floor(maxDose / s);
+
+    if (minTab <= maxTab) {
+      html += tabText(minTab, maxTab, s);
     } else {
-      html += `• ไม่มีเม็ดเต็มที่อยู่ในช่วง (${s} mg/เม็ด) → อาจพิจารณาหักครึ่งเม็ด<br>`;
+      html += `• ไม่สามารถจัดเป็นเม็ดเต็มได้ (${s} mg/เม็ด) → ใช้ดุลยพินิจ<br>`;
     }
   });
 
@@ -65,58 +68,60 @@ function drugBlock(name, w, minMgKg, maxMgKg, strengths) {
 /* ======================
    2FDC / 4FDC
 ======================*/
-function fdcBlock(title, w, minMgKg, maxMgKg, mgPerTab) {
+function fdcBlock(title, w, minMgKg, maxMgKg, refMgPerTab) {
   const minDose = w * minMgKg;
   const maxDose = w * maxMgKg;
-  const range = fullTabRange(minDose, maxDose, mgPerTab);
+
+  const minTab = Math.ceil(minDose / refMgPerTab);
+  const maxTab = Math.floor(maxDose / refMgPerTab);
 
   let html = `<div class="drug">
   <b>${title}</b><br>
   ขนาดยาที่คำนวณได้: ${minDose.toFixed(0)} – ${maxDose.toFixed(0)} mg/day<br>`;
 
-  if (range) {
-    html += `คำแนะนำ: ${range} เม็ด<br>`;
+  if (minTab <= maxTab) {
+    html += `<b>คำแนะนำ:</b><br>`;
+    html += tabText(minTab, maxTab, "ต่อสูตร FDC");
   } else {
-    html += `ไม่สามารถจัดเป็นเม็ดเต็มได้ → ใช้ดุลยพินิจ<br>`;
+    html += `<b>คำแนะนำ:</b> ไม่สามารถคำนวณจำนวนเม็ดเต็มที่อยู่ในช่วงขนาดยาได้<br>`;
   }
 
   return html + `</div>`;
 }
 
 /* ======================
-   3HP
+   3HP (LTBI)
 ======================*/
 function calc3HP(age, w) {
   let html = `<div class="drug">
   <b>3HP (วัณโรคแฝง)</b><br>
-  1 เม็ด = INH 300 mg + Rifapentine 300 mg<br>`;
+  1 เม็ด = Isoniazid 300 mg + Rifapentine 300 mg<br>`;
 
-  let inhDose, rfpDose;
+  let inh, rif;
 
   if (age <= 14) {
-    if (w <= 15) { inhDose = 300; rfpDose = 300; }
-    else if (w <= 23) { inhDose = 500; rfpDose = 450; }
-    else if (w <= 30) { inhDose = 600; rfpDose = 600; }
-    else { inhDose = 700; rfpDose = 750; }
+    if (w <= 15) { inh = 300; rif = 300; }
+    else if (w <= 23) { inh = 500; rif = 450; }
+    else if (w <= 30) { inh = 600; rif = 600; }
+    else { inh = 700; rif = 750; }
   } else {
-    inhDose = Math.min(Math.ceil((w * 15) / 100) * 100, 900);
-    rfpDose = (w <= 50) ? 750 : 900;
+    inh = Math.min(Math.ceil((w * 15) / 100) * 100, 900);
+    rif = (w <= 50) ? 750 : 900;
   }
 
   html += `
-  ขนาดยาที่คำนวณได้:<br>
-  • INH ${inhDose} mg<br>
-  • Rifapentine ${rfpDose} mg<br>`;
+  <b>ขนาดยาที่คำนวณได้:</b><br>
+  • INH ${inh} mg<br>
+  • Rifapentine ${rif} mg<br><br>`;
 
-  const tabs = Math.max(inhDose, rfpDose) / 300;
-  const fullTabs = Math.floor(tabs);
+  const minTab = Math.ceil(Math.max(inh, rif) / 300);
+  const actual = minTab * 300;
 
-  html += `<br>คำแนะนำ:<br>`;
+  html += `<b>คำแนะนำ:</b><br>`;
+  html += `• ${minTab} เม็ด/สัปดาห์ (INH ${actual} mg + Rifapentine ${actual} mg)<br>`;
 
-  if (fullTabs * 300 >= inhDose && fullTabs * 300 >= rfpDose) {
-    html += `• ${fullTabs} เม็ด/สัปดาห์<br>`;
-  } else {
-    html += `• ไม่สามารถจัดเป็นเม็ดเต็มได้ → ใช้ดุลยพินิจ<br>`;
+  if (actual > inh || actual > rif) {
+    html += `<span class="note">⚠ ปริมาณยาสูงกว่าที่คำนวณได้ โปรดใช้ดุลยพินิจ</span>`;
   }
 
   return html + `</div>`;
@@ -136,7 +141,7 @@ function calculate() {
 
   let html = "";
 
-  html += `<div class="section"><h3>1️⃣ แยกเม็ดยา</h3>`;
+  html += `<div class="section"><h3>1️⃣ แยกเม็ดยา I / R / Z / E</h3>`;
   html += drugBlock("Isoniazid (I)", w, 4, 6, [100]);
   html += drugBlock("Rifampicin (R)", w, 8, 12, [300, 450]);
   html += drugBlock("Pyrazinamide (Z)", w, 20, 30, [500]);
