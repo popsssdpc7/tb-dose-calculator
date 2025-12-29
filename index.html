@@ -6,102 +6,197 @@
 <style>
 body{font-family:Arial;background:#f4f6f9;padding:30px}
 .container{max-width:900px;margin:auto;background:#fff;padding:25px;border-radius:10px}
-h2,h3{margin-top:20px}
+h2,h3{margin-top:25px}
 .drug{margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ccc}
 .alert{color:red;font-weight:bold}
-button{width:100%;padding:12px;background:#1976d2;color:#fff;border:none;border-radius:6px;margin-top:10px}
-input,select{width:100%;padding:8px;margin:10px 0}
+small{color:#555}
+button{padding:12px;margin:5px 0;background:#1976d2;color:#fff;border:none;border-radius:6px;width:100%}
+input{width:100%;padding:8px;margin:10px 0}
+.mode-btn{background:#555}
 .hidden{display:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 </style>
 </head>
 
 <body>
 <div class="container">
-<h2>เครื่องมือคำนวณขนาดยาวัณโรค</h2>
+<h2>TB Drug Dose Calculator</h2>
 
-<select id="mode" onchange="switchMode()">
-  <option value="tb">คำนวณขนาดยาวัณโรค</option>
-  <option value="ltbi">คำนวณขนาดยาวัณโรคแฝง (3HP)</option>
-</select>
+<!-- เลือกโหมด -->
+<button class="mode-btn" onclick="setMode('tb')">คำนวณขนาดยาวัณโรค</button>
+<button class="mode-btn" onclick="setMode('ltbi')">คำนวณขนาดยาวัณโรคแฝง (3HP)</button>
 
-<input type="number" id="age" placeholder="อายุ (ปี)" class="hidden">
-<input type="number" id="weight" placeholder="น้ำหนัก (kg)">
-
-<button onclick="calc()">คำนวณ</button>
+<!-- input -->
+<div id="inputs" class="hidden">
+  <input type="number" id="age" placeholder="อายุ (ปี)" class="hidden">
+  <input type="number" id="weight" placeholder="น้ำหนัก (kg)">
+  <button onclick="calc()">คำนวณ</button>
+</div>
 
 <div id="result"></div>
 </div>
 
 <script>
-function switchMode(){
-  const isLTBI = document.getElementById("mode").value==="ltbi";
-  document.getElementById("age").classList.toggle("hidden", !isLTBI);
+let mode="";
+
+function setMode(m){
+  mode = m;
+  document.getElementById("inputs").classList.remove("hidden");
   document.getElementById("result").innerHTML="";
+  document.getElementById("weight").value="";
+  document.getElementById("age").value="";
+  document.getElementById("age").classList.toggle("hidden",m==="tb");
 }
 
-function round100(x){
-  return Math.ceil(x/100)*100;
+function doseRange(w,min,max,maxDose){
+  let lo=w*min, hi=w*max;
+  return {
+    min:Math.round(Math.min(lo,maxDose)),
+    max:Math.round(Math.min(hi,maxDose))
+  };
 }
 
-function validTab(x){
-  return Number.isInteger(x) || Number.isInteger(x*2);
-}
-
-function calcLTBI(age,w){
-  let inh=0, rpt=0;
-
-  if(age>=2 && age<=14){
-    if(w>=10 && w<=15){inh=300; rpt=300;}
-    else if(w<=23){inh=500; rpt=450;}
-    else if(w<=30){inh=600; rpt=600;}
-    else if(w>30){inh=700; rpt=750;}
-    else return renderFail();
+function recommend(range,strength,maxDose){
+  let opts=[];
+  for(let t=1;t<=10;t++){
+    let d=t*strength;
+    if(d>=range.min && d<=range.max && d<=maxDose){
+      opts.push(`${t} เม็ด`);
+    }
   }
-  else if(age>14){
-    inh=Math.min(round100(w*15),900);
-    rpt=(w<=50)?750:900;
-  }
-  else return renderFail();
-
-  const inhTab = inh/300;
-  const rptTab = rpt/300;
-
-  if(!validTab(inhTab) || !validTab(rptTab)){
-    return renderFail();
-  }
-
-  return `
-  <h3>วัณโรคแฝง (3HP)</h3>
-  <div class="drug">
-    <b>ยาผสมต่อ 1 เม็ด:</b> INH 300 mg + Rifapentine 300 mg<br><br>
-    Isoniazid: ${inh} mg → <b>${inhTab} เม็ด</b><br>
-    Rifapentine: ${rpt} mg → <b>${rptTab} เม็ด</b>
-  </div>
-  `;
+  return opts.length
+    ? "แนะนำ: " + opts.join(" หรือ ")
+    : "<span class='alert'>⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>";
 }
 
-function renderFail(){
-  return `
-  <h3>วัณโรคแฝง (3HP)</h3>
-  <span class="alert">⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>
-  `;
+function fdcCalc(w,strengths){
+  let tabs=[];
+  for(let t=1;t<=10;t++){
+    let ok=true;
+    for(let d of strengths){
+      if(t*d.dose < d.min || t*d.dose > d.max) ok=false;
+    }
+    if(ok) tabs.push(t);
+  }
+  return tabs.length
+    ? `แนะนำ: ${tabs[0]} เม็ด`
+    : "<span class='alert'>⚠ ไม่เหมาะสมกับช่วงน้ำหนักนี้</span>";
 }
 
 function calc(){
-  const w=parseFloat(document.getElementById("weight").value);
-  const age=parseFloat(document.getElementById("age").value);
-  const mode=document.getElementById("mode").value;
+  let w = Number(document.getElementById("weight").value);
+  let ageVal = document.getElementById("age").value;
+  let age = Number(ageVal);
 
   if(!w||w<=0){alert("กรอกน้ำหนัก");return;}
-  if(mode==="ltbi" && (!age||age<=0)){alert("กรอกอายุ");return;}
+  if(mode==="ltbi" && (!ageVal||age<=0)){alert("กรอกอายุ");return;}
 
   let html="";
 
-  if(mode==="ltbi"){
-    html=calcLTBI(age,w);
-  }else{
-    html="<h3>วัณโรค (TB ปกติ)</h3><small>ใช้สูตรเดิมของคุณ</small>";
+  /* ================= TB ปกติ ================= */
+  if(mode==="tb"){
+    const H=doseRange(w,4,6,300);
+    const R=doseRange(w,8,12,600);
+    const Z=doseRange(w,20,30,2000);
+    const E=doseRange(w,15,20,1200);
+
+    html+=`<h3>ยาแยกเม็ด (IRZE)</h3>`;
+
+    html+=`
+    <div class="drug"><b>Isoniazid (H)</b> 4–6 mg/kg/day<br>
+    ขนาดยาที่คำนวณได้: ${H.min} – ${H.max} mg/day<br>
+    ${recommend(H,100,300)} (100 mg/เม็ด)
+    </div>`;
+
+    html+=`
+    <div class="drug"><b>Rifampicin (R)</b> 8–12 mg/kg/day
+    <div class="grid">
+      <div>
+        <b>Rifampicin 300 mg</b><br>
+        ${recommend(R,300,600)}
+      </div>
+      <div>
+        <b>Rifampicin 450 mg</b><br>
+        ${recommend(R,450,600)}
+      </div>
+    </div>
+    </div>`;
+
+    html+=`
+    <div class="drug"><b>Pyrazinamide (Z)</b> 20–30 mg/kg/day<br>
+    ${recommend(Z,500,2000)} (500 mg/เม็ด)
+    </div>`;
+
+    html+=`
+    <div class="drug"><b>Ethambutol (E)</b> 15–20 mg/kg/day
+    <div class="grid">
+      <div>
+        <b>Ethambutol 400 mg</b><br>
+        ${recommend(E,400,1200)}
+      </div>
+      <div>
+        <b>Ethambutol 500 mg</b><br>
+        ${recommend(E,500,1200)}
+      </div>
+    </div>
+    </div>`;
+
+    html+=`<h3>ยาเม็ดรวม (FDC)</h3>`;
+
+    html+=`
+    <div class="drug"><b>2FDC</b> (isoniazid 75 mg + rifampicin 150 mg)<br>
+    ${fdcCalc(w,[
+      {dose:75,min:H.min,max:H.max},
+      {dose:150,min:R.min,max:R.max}
+    ])}
+    </div>`;
+
+    html+=`
+    <div class="drug"><b>4FDC</b> (isoniazid 75 mg + rifampicin 150 mg + pyrazinamide 400 mg + ethambutol 275 mg)<br>
+    ${fdcCalc(w,[
+      {dose:75,min:H.min,max:H.max},
+      {dose:150,min:R.min,max:R.max},
+      {dose:400,min:Z.min,max:Z.max},
+      {dose:275,min:E.min,max:E.max}
+    ])}
+    </div>`;
   }
+
+  /* ================= LTBI (3HP) ================= */
+  if(mode==="ltbi"){
+    let inh=0, rpt=0;
+
+    if(age<=14){
+      if(w<=15){inh=300;rpt=300}
+      else if(w<=23){inh=500;rpt=450}
+      else if(w<=30){inh=600;rpt=600}
+      else{inh=700;rpt=750}
+    }else{
+      inh=Math.ceil(w*15/100)*100;
+      if(inh>900) inh=900;
+      rpt=w<=50?750:900;
+    }
+
+    let tabsINH = inh/300;
+    let tabsRPT = rpt/300;
+    let tabs = Math.max(tabsINH,tabsRPT);
+
+    html+=`<h3>วัณโรคแฝง (3HP)</h3>
+    <div class="drug">
+    ยาเม็ดผสม: isoniazid 300 mg + rifapentine 300 mg<br>
+    INH ${inh} mg + Rifapentine ${rpt} mg / สัปดาห์<br>
+    ${
+      tabs%0.5===0
+      ? `<b>แนะนำ: ${tabs} เม็ด/สัปดาห์</b>`
+      : "<span class='alert'>⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>"
+    }
+    </div>`;
+  }
+
+  html+=`<small>
+  ⚠ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้<br>
+  ไม่ทดแทนดุลยพินิจแพทย์
+  </small>`;
 
   document.getElementById("result").innerHTML=html;
 }
