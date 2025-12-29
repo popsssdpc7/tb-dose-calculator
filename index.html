@@ -6,7 +6,7 @@
 <style>
 body { font-family: sans-serif; margin: 20px; }
 input, button { padding: 6px; margin: 5px; }
-.section { border: 1px solid #ccc; padding: 10px; margin-top: 15px; }
+.section { border: 1px solid #ccc; padding: 12px; margin-top: 15px; }
 h3 { margin-top: 0; }
 .small { font-size: 0.9em; color: #555; }
 .warn { margin-top: 20px; color: darkred; font-weight: bold; }
@@ -28,7 +28,9 @@ h3 { margin-top: 0; }
 
 <script>
 function calculate() {
+  const age = parseFloat(document.getElementById("age").value);
   const w = parseFloat(document.getElementById("weight").value);
+
   if (!w || w <= 0) {
     alert("กรุณากรอกน้ำหนักให้ถูกต้อง");
     return;
@@ -41,10 +43,10 @@ function calculate() {
   ==========================*/
   html += `<div class="section"><h3>1️⃣ แยกเม็ดยาเดี่ยว</h3>`;
 
-  html += calcDrug("Isoniazid (I)", w, 5, [100]);
-  html += calcDrug("Rifampicin (R)", w, 10, [300, 450]);
-  html += calcDrug("Pyrazinamide (Z)", w, 25, [500]);
-  html += calcDrug("Ethambutol (E)", w, 15, [400, 500]);
+  html += calcDrug("Isoniazid (I)", w, 4, 6, [100]);
+  html += calcDrug("Rifampicin (R)", w, 8, 12, [300, 450]);
+  html += calcDrug("Pyrazinamide (Z)", w, 20, 30, [500]);
+  html += calcDrug("Ethambutol (E)", w, 15, 20, [400, 500]);
 
   html += `</div>`;
 
@@ -63,13 +65,10 @@ function calculate() {
   html += `</div>`;
 
   /* =========================
-     4) 3HP
+     4) 3HP (LTBI)
   ==========================*/
-  html += `<div class="section"><h3>4️⃣ 3HP (Isoniazid/Rifapentine 300/300 mg)</h3>`;
-  let dose3hp = w * 15;
-  let tabs3hp = preferWhole(dose3hp / 300);
-  html += `แนะนำ: <b>${tabs3hp}</b> เม็ด/สัปดาห์<br>`;
-  html += `ปริมาณยาที่ได้ ≈ ${(tabs3hp * 300).toFixed(0)} mg`;
+  html += `<div class="section"><h3>4️⃣ วัณโรคแฝง (3HP)</h3>`;
+  html += calc3HP(age, w);
   html += `</div>`;
 
   html += `<div class="warn">
@@ -90,23 +89,27 @@ function preferWhole(x) {
   return Math.round(x * 2) / 2;
 }
 
-function calcDrug(name, w, mgkg, strengths) {
-  let dose = w * mgkg;
-  let out = `<b>${name}</b><br>`;
+function calcDrug(name, w, minMgKg, maxMgKg, strengths) {
+  let minDose = w * minMgKg;
+  let maxDose = w * maxMgKg;
+
+  let out = `<b>${name}</b> ${minMgKg}–${maxMgKg} mg/kg/day<br>`;
+  out += `<span class="small">
+  ขนาดยาที่คำนวณได้: ${minDose.toFixed(0)} – ${maxDose.toFixed(0)} mg/day
+  </span><br>`;
 
   strengths.forEach(strength => {
-    let rawTabs = dose / strength;
+    let rawTabs = (w * ((minMgKg + maxMgKg) / 2)) / strength;
     let tabs = preferWhole(rawTabs);
 
-    let minW = ((tabs - 0.5) * strength) / mgkg;
-    let maxW = ((tabs + 0.5) * strength) / mgkg;
+    let actualDose = tabs * strength;
 
-    out += `
-    • เม็ดละ ${strength} mg → <b>${tabs}</b> เม็ด 
-      (${(tabs * strength).toFixed(0)} mg)
-      <span class="small">
-      [ช่วงน้ำหนักประมาณ ${minW.toFixed(1)} – ${maxW.toFixed(1)} กก.]
-      </span><br>`;
+    if (actualDose < minDose) {
+      out += `• เม็ดละ ${strength} mg → ❌ ต่ำกว่าช่วงรักษา<br>`;
+    } else {
+      out += `• เม็ดละ ${strength} mg → <b>${tabs}</b> เม็ด 
+      (${actualDose.toFixed(0)} mg)<br>`;
+    }
   });
 
   return out + "<br>";
@@ -116,6 +119,38 @@ function calcFDC(w, mgPerTab) {
   let dose = w * 10;
   let tabs = preferWhole(dose / mgPerTab);
   return `แนะนำ: <b>${tabs}</b> เม็ด (${(tabs * mgPerTab).toFixed(0)} mg)<br>`;
+}
+
+function calc3HP(age, w) {
+  let html = `
+  <b>Isoniazid + Rifapentine</b><br>
+  1 เม็ด = INH 300 mg + Rifapentine 300 mg<br><br>`;
+
+  let inhDose = w * 15;
+  if (inhDose > 900) inhDose = 900;
+
+  let rifDose = w <= 50 ? 750 : 900;
+
+  html += `
+  ขนาดยาที่คำนวณได้:<br>
+  • INH ≈ ${inhDose.toFixed(0)} mg<br>
+  • Rifapentine ≈ ${rifDose} mg<br><br>`;
+
+  let tabs = preferWhole(Math.max(inhDose, rifDose) / 300);
+  let actual = tabs * 300;
+
+  html += `
+  ขนาดยาที่แนะนำ:<br>
+  • <b>${tabs}</b> เม็ด/สัปดาห์<br>
+  • ได้ยา ≈ INH ${actual} mg + Rifapentine ${actual} mg<br>`;
+
+  if (actual > inhDose || actual > rifDose) {
+    html += `<br><span style="color:darkred">
+    ⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ (ขนาดยาเกินค่าที่คำนวณได้)
+    </span>`;
+  }
+
+  return html;
 }
 </script>
 
