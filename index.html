@@ -73,12 +73,13 @@ button{
 </div>
 
 <script>
-function calcRange(w,min,max see,maxDose){
-    let lo=w*min, hi=w*max;
+function calcRange(w, minMgKg, maxMgKg, maxDose) {
+    let lo = w * minMgKg;
+    let hi = w * maxMgKg;
     return {
-        min:Math.round(lo),
-        max:Math.round(Math.min(hi,maxDose)),
-        exceed:hi>maxDose
+        min: Math.round(lo),
+        max: Math.round(Math.min(hi, maxDose)),
+        exceed: hi > maxDose
     };
 }
 
@@ -157,3 +158,4 @@ function calculateAll(){
 </script>
 </body>
 </html>
+
