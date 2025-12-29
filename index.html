@@ -2,157 +2,78 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>TB Dose Calculator</title>
+<title>TB Drug Dose Calculator</title>
 <style>
-body { font-family: sans-serif; margin: 20px; }
-input, button { padding: 6px; margin: 5px; }
-.section { border: 1px solid #ccc; padding: 12px; margin-top: 15px; }
-h3 { margin-top: 0; }
-.small { font-size: 0.9em; color: #555; }
-.warn { margin-top: 20px; color: darkred; font-weight: bold; }
+body { font-family: Arial, sans-serif; background:#f5f7fa; padding:20px; }
+.container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
+h2,h3 { text-align:center; }
+.drug { margin-bottom:18px; padding-bottom:12px; border-bottom:1px dashed #ccc; }
+.note { color:#555; font-size:0.9em; }
+.warn { margin-top:20px; color:darkred; font-weight:bold; }
 </style>
 </head>
 
 <body>
+<div class="container">
+<h2>คำนวณขนาดยาวัณโรค</h2>
 
-<h2>โปรแกรมคำนวณขนาดยาวัณโรค</h2>
-
-อายุ (ปี):
-<input type="number" id="age"><br>
-น้ำหนัก (กก.):
-<input type="number" id="weight"><br>
-
+น้ำหนัก (kg):
+<input type="number" id="weight">
 <button onclick="calculate()">คำนวณ</button>
 
 <div id="result"></div>
+</div>
 
 <script>
-function calculate() {
-  const age = parseFloat(document.getElementById("age").value);
-  const w = parseFloat(document.getElementById("weight").value);
+function drugBlock(name, w, minMgKg, maxMgKg, strengths) {
+  let minDose = w * minMgKg;
+  let maxDose = w * maxMgKg;
 
+  let html = `<div class="drug">
+  <b>${name}</b> ${minMgKg}–${maxMgKg} mg/kg/day<br>
+  <b>ขนาดยาที่คำนวณได้:</b> ${minDose.toFixed(0)} – ${maxDose.toFixed(0)} mg/day<br>
+  <b>คำแนะนำ:</b><br>`;
+
+  strengths.forEach(s => {
+    let minTabs = Math.ceil(minDose / s);
+    let maxTabs = Math.floor(maxDose / s);
+
+    if (minTabs <= maxTabs) {
+      html += `• ${minTabs} – ${maxTabs} เม็ด (${s} mg/tab)<br>`;
+    } else {
+      let halfTabs = Math.round((minDose / s) * 2) / 2;
+      let actual = halfTabs * s;
+      html += `• ไม่สามารถจัดเป็นเม็ดเต็มได้ → อาจพิจารณา ${halfTabs} เม็ด (${actual.toFixed(0)} mg)<br>`;
+    }
+  });
+
+  html += `<span class="note">แนะนำให้ใช้เม็ดเต็มก่อน หากอยู่ในช่วงการรักษา</span>
+  </div>`;
+
+  return html;
+}
+
+function calculate() {
+  const w = parseFloat(document.getElementById("weight").value);
   if (!w || w <= 0) {
     alert("กรุณากรอกน้ำหนักให้ถูกต้อง");
     return;
   }
 
-  let html = "";
+  let html = `<h3>ยาแยกเม็ด</h3>`;
 
-  /* =========================
-     1) แยกเม็ดยาเดี่ยว
-  ==========================*/
-  html += `<div class="section"><h3>1️⃣ แยกเม็ดยาเดี่ยว</h3>`;
-
-  html += calcDrug("Isoniazid (I)", w, 4, 6, [100]);
-  html += calcDrug("Rifampicin (R)", w, 8, 12, [300, 450]);
-  html += calcDrug("Pyrazinamide (Z)", w, 20, 30, [500]);
-  html += calcDrug("Ethambutol (E)", w, 15, 20, [400, 500]);
-
-  html += `</div>`;
-
-  /* =========================
-     2) 2FDC
-  ==========================*/
-  html += `<div class="section"><h3>2️⃣ 2FDC (I/R 300/300 mg)</h3>`;
-  html += calcFDC(w, 300);
-  html += `</div>`;
-
-  /* =========================
-     3) 4FDC
-  ==========================*/
-  html += `<div class="section"><h3>3️⃣ 4FDC (75/150/400/275 mg)</h3>`;
-  html += calcFDC(w, 150);
-  html += `</div>`;
-
-  /* =========================
-     4) 3HP (LTBI)
-  ==========================*/
-  html += `<div class="section"><h3>4️⃣ วัณโรคแฝง (3HP)</h3>`;
-  html += calc3HP(age, w);
-  html += `</div>`;
+  html += drugBlock("Isoniazid (I)", w, 4, 6, [100]);
+  html += drugBlock("Rifampicin (R)", w, 8, 12, [300, 450]);
+  html += drugBlock("Pyrazinamide (Z)", w, 20, 30, [500]);
+  html += drugBlock("Ethambutol (E)", w, 15, 20, [400, 500]);
 
   html += `<div class="warn">
-  ⚠️ โปรแกรมอาจคำนวณผิดพลาดได้<br>
-  โปรดตรวจสอบก่อนนำข้อมูลไปใช้<br>
-  ไม่สามารถใช้ทดแทนดุลยพินิจแพทย์ได้
+  ⚠ โปรแกรมอาจคำนวณผิดพลาดได้ กรุณาตรวจสอบก่อนนำไปใช้  
+  ไม่ทดแทนดุลยพินิจแพทย์
   </div>`;
 
   document.getElementById("result").innerHTML = html;
 }
-
-/* =========================
-   CORE FUNCTIONS
-=========================*/
-function preferWhole(x) {
-  let full = Math.round(x);
-  if (Math.abs(full - x) / x <= 0.1) return full;
-  return Math.round(x * 2) / 2;
-}
-
-function calcDrug(name, w, minMgKg, maxMgKg, strengths) {
-  let minDose = w * minMgKg;
-  let maxDose = w * maxMgKg;
-
-  let out = `<b>${name}</b> ${minMgKg}–${maxMgKg} mg/kg/day<br>`;
-  out += `<span class="small">
-  ขนาดยาที่คำนวณได้: ${minDose.toFixed(0)} – ${maxDose.toFixed(0)} mg/day
-  </span><br>`;
-
-  strengths.forEach(strength => {
-    let rawTabs = (w * ((minMgKg + maxMgKg) / 2)) / strength;
-    let tabs = preferWhole(rawTabs);
-
-    let actualDose = tabs * strength;
-
-    if (actualDose < minDose) {
-      out += `• เม็ดละ ${strength} mg → ❌ ต่ำกว่าช่วงรักษา<br>`;
-    } else {
-      out += `• เม็ดละ ${strength} mg → <b>${tabs}</b> เม็ด 
-      (${actualDose.toFixed(0)} mg)<br>`;
-    }
-  });
-
-  return out + "<br>";
-}
-
-function calcFDC(w, mgPerTab) {
-  let dose = w * 10;
-  let tabs = preferWhole(dose / mgPerTab);
-  return `แนะนำ: <b>${tabs}</b> เม็ด (${(tabs * mgPerTab).toFixed(0)} mg)<br>`;
-}
-
-function calc3HP(age, w) {
-  let html = `
-  <b>Isoniazid + Rifapentine</b><br>
-  1 เม็ด = INH 300 mg + Rifapentine 300 mg<br><br>`;
-
-  let inhDose = w * 15;
-  if (inhDose > 900) inhDose = 900;
-
-  let rifDose = w <= 50 ? 750 : 900;
-
-  html += `
-  ขนาดยาที่คำนวณได้:<br>
-  • INH ≈ ${inhDose.toFixed(0)} mg<br>
-  • Rifapentine ≈ ${rifDose} mg<br><br>`;
-
-  let tabs = preferWhole(Math.max(inhDose, rifDose) / 300);
-  let actual = tabs * 300;
-
-  html += `
-  ขนาดยาที่แนะนำ:<br>
-  • <b>${tabs}</b> เม็ด/สัปดาห์<br>
-  • ได้ยา ≈ INH ${actual} mg + Rifapentine ${actual} mg<br>`;
-
-  if (actual > inhDose || actual > rifDose) {
-    html += `<br><span style="color:darkred">
-    ⚠ โปรดใช้ดุลยพินิจในการตัดสินใจ (ขนาดยาเกินค่าที่คำนวณได้)
-    </span>`;
-  }
-
-  return html;
-}
 </script>
-
 </body>
 </html>
