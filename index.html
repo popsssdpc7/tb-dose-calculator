@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <title>TB Drug Dose Calculator</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h2 { margin-top: 30px; }
-    .box { border: 1px solid #ccc; padding: 15px; margin-top: 15px; border-radius: 8px; }
-    .warn { color: red; font-weight: bold; }
+body { font-family: Arial, sans-serif; margin: 20px; }
+.box { border:1px solid #ccc; padding:15px; margin-top:20px; border-radius:8px;}
+.warn { color:red; font-weight:bold; }
 </style>
 </head>
+
 <body>
 
 <h1>โปรแกรมคำนวณขนาดยาวัณโรค</h1>
 
-<label>อายุ (ปี): </label>
+อายุ (ปี):
 <input type="number" id="age" value="30"><br><br>
 
-<label>น้ำหนัก (kg): </label>
+น้ำหนัก (kg):
 <input type="number" id="weight" value="30"><br><br>
 
 <button onclick="calculate()">คำนวณ</button>
@@ -25,80 +25,106 @@
 <div id="result"></div>
 
 <script>
-function roundHalfTablet(mg, tablet) {
-    return Math.ceil(mg / (tablet / 2)) * (tablet / 2);
+function roundHalf(mg, tablet){
+    return Math.ceil(mg / (tablet/2)) * (tablet/2);
 }
 
-function calculate() {
+function calculate(){
     const age = Number(document.getElementById("age").value);
     const wt = Number(document.getElementById("weight").value);
     let html = "";
 
-    /* ================= IRZE / 2FDC ================= */
-    html += `<div class="box"><h2>วัณโรคระยะแรก (IRZE / 2FDC)</h2>`;
+    /* ================= IRZE (ยาแยก) ================= */
+    html += `<div class="box"><h2>IRZE (ยาแยก)</h2>`;
 
     const drugs = [
-        { name: "Isoniazid (H)", min: 5, max: 10, tab: 300 },
-        { name: "Rifampicin (R)", min: 10, max: 20, tab: 300 },
-        { name: "Pyrazinamide (Z)", min: 20, max: 30, tab: 500 },
-        { name: "Ethambutol (E)", min: 15, max: 20, tab: 400 }
+        {n:"Isoniazid (H)", min:5, max:10, tab:300},
+        {n:"Rifampicin (R)", min:10, max:20, tab:300},
+        {n:"Pyrazinamide (Z)", min:20, max:30, tab:500},
+        {n:"Ethambutol (E)", min:15, max:20, tab:400}
     ];
 
-    drugs.forEach(d => {
-        const minDose = d.min * wt;
-        const maxDose = d.max * wt;
-        let recDose = roundHalfTablet(minDose, d.tab);
-
-        if (recDose < minDose) recDose += d.tab / 2;
-
+    drugs.forEach(d=>{
+        const min = d.min*wt;
+        const max = d.max*wt;
+        let rec = roundHalf(min, d.tab);
         html += `
-        <b>${d.name}</b><br>
-        ขนาดที่คำนวณได้: ${Math.round(minDose)} – ${Math.round(maxDose)} mg/day<br>
-        ขนาดยาที่แนะนำ: ${recDose} mg (${recDose / d.tab} เม็ด)<br><br>
-        `;
+        <b>${d.n}</b><br>
+        ขนาดที่คำนวณได้: ${Math.round(min)}–${Math.round(max)} mg/day<br>
+        ขนาดแนะนำ: ${rec} mg (${rec/d.tab} เม็ด)<br><br>`;
     });
-
     html += `</div>`;
 
-    /* ================= Latent TB : 3HP ================= */
+    /* ================= 2FDC (HR) ================= */
+    html += `<div class="box"><h2>2FDC (HR)</h2>
+    <p>1 เม็ด = H 75 mg + R 150 mg</p>`;
+
+    let hNeed = 5 * wt;
+    let rNeed = 10 * wt;
+    let tabs2 = Math.ceil(Math.max(hNeed/75, rNeed/150));
+    let hGive = tabs2*75;
+    let rGive = tabs2*150;
+
+    html += `
+    ขนาดที่คำนวณได้: H ${Math.round(hNeed)} mg, R ${Math.round(rNeed)} mg<br>
+    ขนาดแนะนำ: ${tabs2} เม็ด/วัน<br>
+    (H ${hGive} mg + R ${rGive} mg)
+    </div>`;
+
+    /* ================= 4FDC (HRZE) ================= */
+    html += `<div class="box"><h2>4FDC (HRZE)</h2>
+    <p>1 เม็ด = H 75 mg + R 150 mg + Z 400 mg + E 275 mg</p>`;
+
+    let zNeed = 20 * wt;
+    let eNeed = 15 * wt;
+
+    let tabs4 = Math.ceil(Math.max(
+        hNeed/75,
+        rNeed/150,
+        zNeed/400,
+        eNeed/275
+    ));
+
+    html += `
+    ขนาดที่คำนวณได้:<br>
+    H ${Math.round(hNeed)} mg, R ${Math.round(rNeed)} mg,
+    Z ${Math.round(zNeed)} mg, E ${Math.round(eNeed)} mg<br><br>
+
+    ขนาดแนะนำ: ${tabs4} เม็ด/วัน<br>
+    (H ${tabs4*75} + R ${tabs4*150} + Z ${tabs4*400} + E ${tabs4*275} mg)
+    </div>`;
+
+    /* ================= 3HP ================= */
     html += `<div class="box"><h2>วัณโรคแฝง (3HP)</h2>
-    <p>1 เม็ด = Isoniazid 300 mg + Rifapentine 300 mg</p>`;
+    <p>1 เม็ด = INH 300 mg + Rifapentine 300 mg</p>`;
 
-    let inhCalc = 0;
-    let rptCalc = 0;
-    let note = "";
+    let inhCalc=0, rptCalc=0, warn="";
 
-    if (age >= 2 && age <= 14) {
-        if (wt <= 15) { inhCalc = 300; rptCalc = 300; }
-        else if (wt <= 23) { inhCalc = 500; rptCalc = 450; }
-        else if (wt <= 30) { inhCalc = 600; rptCalc = 600; }
-        else { inhCalc = 700; rptCalc = 750; }
-    } else {
-        inhCalc = Math.ceil((15 * wt) / 100) * 100;
-        if (inhCalc > 900) inhCalc = 900;
-        rptCalc = wt <= 50 ? 750 : 900;
+    if(age>=2 && age<=14){
+        if(wt<=15){inhCalc=300;rptCalc=300;}
+        else if(wt<=23){inhCalc=500;rptCalc=450;}
+        else if(wt<=30){inhCalc=600;rptCalc=600;}
+        else{inhCalc=700;rptCalc=750;}
+    }else{
+        inhCalc=Math.ceil((15*wt)/100)*100;
+        if(inhCalc>900) inhCalc=900;
+        rptCalc = wt<=50 ? 750 : 900;
     }
 
-    let tabletsByINH = Math.ceil(inhCalc / 300);
-    let tabletsByRPT = Math.ceil(rptCalc / 300);
-    let tablets = Math.max(tabletsByINH, tabletsByRPT);
+    let tabs = Math.max(
+        Math.ceil(inhCalc/300),
+        Math.ceil(rptCalc/300)
+    );
 
-    let inhFinal = tablets * 300;
-    let rptFinal = tablets * 300;
-
-    if (inhFinal > inhCalc || rptFinal > rptCalc) {
-        note = `<div class="warn">⚠️ โปรดใช้ดุลยพินิจในการตัดสินใจ</div>`;
+    if(tabs*300>inhCalc || tabs*300>rptCalc){
+        warn = `<div class="warn">⚠️ โปรดใช้ดุลยพินิจในการตัดสินใจ</div>`;
     }
 
     html += `
-    <b>ขนาดยาที่คำนวณได้</b><br>
-    • INH ${inhCalc} mg<br>
-    • Rifapentine ${rptCalc} mg<br><br>
-
-    <b>ขนาดยาที่แนะนำ</b><br>
-    • ${tablets} เม็ด / สัปดาห์<br>
-    (INH ${inhFinal} mg + Rifapentine ${rptFinal} mg)
-    ${note}
+    ขนาดที่คำนวณได้: INH ${inhCalc} mg, Rifapentine ${rptCalc} mg<br>
+    ขนาดแนะนำ: ${tabs} เม็ด/สัปดาห์<br>
+    (INH ${tabs*300} + Rifapentine ${tabs*300} mg)
+    ${warn}
     </div>`;
 
     document.getElementById("result").innerHTML = html;
