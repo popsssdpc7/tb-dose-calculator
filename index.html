@@ -14,7 +14,7 @@ button{padding:12px;margin:5px 0;background:#1976d2;color:#fff;border:none;borde
 input{width:100%;padding:8px;margin:10px 0}
 .mode-btn{background:#555}
 .hidden{display:none}
-.col{display:inline-block;width:48%;vertical-align:top}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 </style>
 </head>
 
@@ -32,7 +32,6 @@ input{width:100%;padding:8px;margin:10px 0}
 </div>
 
 <div id="result"></div>
-  
 </div>
 
 <script>
@@ -56,113 +55,133 @@ function doseRange(w,min,max,maxDose){
 }
 
 function recommend(range,strength,maxDose){
-  let full=[], half=[];
+  let opts=[];
   for(let t=1;t<=10;t++){
     let d=t*strength;
-    if(d>=range.min && d<=range.max && d<=maxDose) full.push(t);
+    if(d>=range.min && d<=range.max && d<=maxDose){
+      opts.push(`${t} เม็ด`);
+    }
   }
-  if(full.length){
-    return `• ${full[0]}${full.at(-1)!==full[0]?` – ${full.at(-1)}`:""} เม็ด (${strength} mg/เม็ด)`;
-  }
-  for(let t=0.5;t<=10;t+=0.5){
-    if(Number.isInteger(t)) continue;
-    let d=t*strength;
-    if(d>=range.min && d<=range.max && d<=maxDose) half.push(t);
-  }
-  return half.length
-    ? `• ${half[0]} เม็ด (${strength} mg/เม็ด) ⚠ ต้องใช้ครึ่งเม็ด`
-    : `<span class="alert">⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>`;
+  return opts.length
+    ? "แนะนำ: " + opts.join(" หรือ ")
+    : "<span class='alert'>⚠ ไม่สามารถจัดขนาดยาที่เหมาะสมได้</span>";
 }
 
 function fdcCalc(w,strengths){
   for(let t=1;t<=10;t++){
     let ok=true;
     for(let d of strengths){
-      let dose=t*d.dose;
-      if(dose<d.min || dose>d.max) ok=false;
+      if(t*d.dose < d.min || t*d.dose > d.max) ok=false;
     }
-    if(ok) return `ขนาดยาที่แนะนำ: ${t} เม็ด`;
+    if(ok) return `แนะนำ: ${t} เม็ด`;
   }
-  for(let t=0.5;t<=10;t+=0.5){
-    if(Number.isInteger(t)) continue;
-    let ok=true;
-    for(let d of strengths){
-      let dose=t*d.dose;
-      if(dose<d.min || dose>d.max) ok=false;
-    }
-    if(ok) return `ขนาดยาที่แนะนำ: ${t} เม็ด ⚠ ต้องใช้ครึ่งเม็ด`;
-  }
-  return `<span class="alert">⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
+  return "<span class='alert'>⚠ ไม่เหมาะสมกับช่วงน้ำหนักนี้</span>";
 }
 
 function calc(){
   let w=Number(document.getElementById("weight").value);
+  let ageVal=document.getElementById("age").value;
+  let age=Number(ageVal);
+
   if(!w||w<=0){alert("กรอกน้ำหนัก");return;}
+  if(mode==="ltbi" && (!ageVal||age<=0)){alert("กรอกอายุ");return;}
 
-  const H=doseRange(w,4,6,300);
-  const R=doseRange(w,8,12,600);
-  const Z=doseRange(w,20,30,2000);
-  const E=doseRange(w,15,20,1200);
+  let html="";
 
-  let html=`<h3>ยาแยกเม็ด (IRZE)</h3>`;
+  /* ================= TB ปกติ ================= */
+  if(mode==="tb"){
+    const H=doseRange(w,4,6,300);
+    const R=doseRange(w,8,12,600);
+    const Z=doseRange(w,20,30,2000);
+    const E=doseRange(w,15,20,1200);
 
-  html+=`
-  <div class="drug">
-  <b>Isoniazid (H) 4–6 mg/kg/day</b><br>
-  ขนาดยาที่คำนวณได้: ${H.min} – ${H.max} mg/day<br>
-  ${recommend(H,100,300)}
-  </div>`;
+    html+=`<h3>ยาแยกเม็ด (IRZE)</h3>`;
 
-  html+=`
-  <div class="drug">
-  <b>Rifampicin (R) 8–12 mg/kg/day</b><br>
-  ขนาดยาที่คำนวณได้: ${R.min} – ${R.max} mg/day<br>
-  <div class="col">${recommend(R,300,600)}</div>
-  <div class="col">${recommend(R,450,600)}</div>
-  </div>`;
+    html+=`
+    <div class="drug">
+      <b>Isoniazid (H)</b> 4–6 mg/kg/day<br>
+      ขนาดยาที่คำนวณได้: ${H.min} – ${H.max} mg/day<br>
+      ${recommend(H,100,300)} (100 mg/เม็ด)
+    </div>`;
 
-  html+=`
-  <div class="drug">
-  <b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
-  ขนาดยาที่คำนวณได้: ${Z.min} – ${Z.max} mg/day<br>
-  ${recommend(Z,500,2000)}
-  </div>`;
+    html+=`
+    <div class="drug">
+      <b>Rifampicin (R)</b> 8–12 mg/kg/day<br>
+      ขนาดยาที่คำนวณได้: ${R.min} – ${R.max} mg/day
+      <div class="grid">
+        <div><b>300 mg</b><br>${recommend(R,300,600)}</div>
+        <div><b>450 mg</b><br>${recommend(R,450,600)}</div>
+      </div>
+    </div>`;
 
-  html+=`
-  <div class="drug">
-  <b>Ethambutol (E) 15–20 mg/kg/day</b><br>
-  ขนาดยาที่คำนวณได้: ${E.min} – ${E.max} mg/day<br>
-  <div class="col">${recommend(E,500,1200)}</div>
-  <div class="col">${recommend(E,400,1200)}</div>
-  <span class="alert">⚠ max dose 1200 mg</span>
-  </div>`;
+    html+=`
+    <div class="drug">
+      <b>Pyrazinamide (Z)</b> 20–30 mg/kg/day<br>
+      ขนาดยาที่คำนวณได้: ${Z.min} – ${Z.max} mg/day<br>
+      ${recommend(Z,500,2000)} (500 mg/เม็ด)
+    </div>`;
 
-  html+=`
-  <h3>ยาเม็ดรวม (FDC)</h3>
-  <div class="drug">
-  <b>2FDC</b> (isoniazid 75 mg + rifampicin 150 mg)<br>
-  ${fdcCalc(w,[
-    {dose:75,min:H.min,max:H.max},
-    {dose:150,min:R.min,max:R.max}
-  ])}
-  </div>
+    html+=`
+    <div class="drug">
+      <b>Ethambutol (E)</b> 15–20 mg/kg/day<br>
+      ขนาดยาที่คำนวณได้: ${E.min} – ${E.max} mg/day
+      <div class="grid">
+        <div><b>400 mg</b><br>${recommend(E,400,1200)}</div>
+        <div><b>500 mg</b><br>${recommend(E,500,1200)}</div>
+      </div>
+    </div>`;
 
-  <div class="drug">
-  <b>4FDC</b> (isoniazid 75 mg + rifampicin 150 mg + pyrazinamide 400 mg + ethambutol 275 mg)<br>
-  ${fdcCalc(w,[
-    {dose:75,min:H.min,max:H.max},
-    {dose:150,min:R.min,max:R.max},
-    {dose:400,min:Z.min,max:Z.max},
-    {dose:275,min:E.min,max:E.max}
-  ])}
-  </div>`;
+    html+=`<h3>ยาเม็ดรวม (FDC)</h3>`;
 
-  html+=`
-  <small>
-  ⚠ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้<br>
-  ไม่ทดแทนดุลยพินิจแพทย์
-  </small>`;
+    html+=`
+    <div class="drug">
+      <b>2FDC</b> (isoniazid 75 mg + rifampicin 150 mg)<br>
+      ${fdcCalc(w,[
+        {dose:75,min:H.min,max:H.max},
+        {dose:150,min:R.min,max:R.max}
+      ])}
+    </div>`;
 
+    html+=`
+    <div class="drug">
+      <b>4FDC</b> (isoniazid 75 mg + rifampicin 150 mg + pyrazinamide 400 mg + ethambutol 275 mg)<br>
+      ${fdcCalc(w,[
+        {dose:75,min:H.min,max:H.max},
+        {dose:150,min:R.min,max:R.max},
+        {dose:400,min:Z.min,max:Z.max},
+        {dose:275,min:E.min,max:E.max}
+      ])}
+    </div>`;
+  }
+
+  /* ================= LTBI ================= */
+  if(mode==="ltbi"){
+    let inh=0,rpt=0;
+    if(age<=14){
+      if(w<=15){inh=300;rpt=300}
+      else if(w<=23){inh=500;rpt=450}
+      else if(w<=30){inh=600;rpt=600}
+      else{inh=700;rpt=750}
+    }else{
+      inh=Math.ceil(w*15/100)*100;
+      if(inh>900) inh=900;
+      rpt=w<=50?750:900;
+    }
+    let tabs=Math.max(inh/300,rpt/300);
+
+    html+=`
+    <h3>วัณโรคแฝง (3HP)</h3>
+    <b>วิธีรับประทาน</b><br>
+รับประทาน <b>1 ครั้ง/สัปดาห์ เป็นเวลา 12 สัปดาห์</b>
+`;
+    <div class="drug">
+      isoniazid 300 mg + rifapentine 300 mg/เม็ด<br>
+      INH ${inh} mg + Rifapentine ${rpt} mg/สัปดาห์<br>
+      ${tabs%0.5===0?`<b>แนะนำ: ${tabs} เม็ด/สัปดาห์</b>`:"<span class='alert'>⚠ ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>"}
+    </div>`;
+  }
+
+  html+=`<small>⚠ โปรแกรมอาจคำนวณผิดพลาดได้ โปรดตรวจสอบก่อนนำข้อมูลไปใช้ ไม่ทดแทนดุลยพินิจแพทย์</small>`;
   document.getElementById("result").innerHTML=html;
 }
 </script>
