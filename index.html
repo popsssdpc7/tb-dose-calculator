@@ -31,12 +31,11 @@ h2 { margin-top: 0; }
 
 <script>
 // ===============================
-// ฟังก์ชันเลือกจำนวนเม็ด
-// เต็มเม็ด > ครึ่งเม็ด
+// เลือกจำนวนเม็ด (เต็มเม็ดก่อน)
 // ===============================
 function recommendTablet(minMg, maxMg, tabMg) {
 
-  // 1) เต็มเม็ดก่อน
+  // เต็มเม็ด
   for (let t = 1; t <= 10; t++) {
     const dose = t * tabMg;
     if (dose >= minMg && dose <= maxMg) {
@@ -44,7 +43,7 @@ function recommendTablet(minMg, maxMg, tabMg) {
     }
   }
 
-  // 2) ครึ่งเม็ด (ใช้เมื่อจำเป็น)
+  // ครึ่งเม็ด
   for (let t = 0.5; t <= 10; t += 0.5) {
     if (Number.isInteger(t)) continue;
     const dose = t * tabMg;
@@ -53,7 +52,6 @@ function recommendTablet(minMg, maxMg, tabMg) {
     }
   }
 
-  // 3) ไม่มีทางเลือก
   return `<span class="warn">ไม่สามารถคำนวณจำนวนเม็ดที่เหมาะสมได้</span>`;
 }
 
@@ -71,25 +69,27 @@ function calculate() {
      1) แยกเม็ดยา I / R / Z / E
      ========================= */
 
-  // Isoniazid (100 mg/tab)
+  // Isoniazid (100 mg)
   const Imin = wt * 4;
   const Imax = wt * 6;
   const Irec = recommendTablet(Imin, Imax, 100);
 
-  // Rifampicin (300 mg/tab)
+  // Rifampicin
   const Rmin = wt * 8;
   const Rmax = wt * 12;
-  const Rrec = recommendTablet(Rmin, Rmax, 300);
+  const R300 = recommendTablet(Rmin, Rmax, 300);
+  const R450 = recommendTablet(Rmin, Rmax, 450);
 
-  // Pyrazinamide (500 mg/tab, max 2000)
+  // Pyrazinamide (500 mg)
   const Zmin = wt * 20;
   const Zmax = Math.min(wt * 30, 2000);
   const Zrec = recommendTablet(Zmin, Zmax, 500);
 
-  // Ethambutol (500 mg/tab, max 1200)
+  // Ethambutol
   const Emin = wt * 15;
   const Emax = Math.min(wt * 20, 1200);
-  const Erec = recommendTablet(Emin, Emax, 500);
+  const E400 = recommendTablet(Emin, Emax, 400);
+  const E500 = recommendTablet(Emin, Emax, 500);
 
   o += `
   <div class="box">
@@ -101,7 +101,8 @@ function calculate() {
 
   <b>Rifampicin (R) 8–12 mg/kg/day</b><br>
   ${Rmin.toFixed(0)} – ${Rmax.toFixed(0)} mg/day<br>
-  เม็ดละ 300 mg → ${Rrec}<br><br>
+  • เม็ดละ 300 mg → ${R300}<br>
+  • เม็ดละ 450 mg → ${R450}<br><br>
 
   <b>Pyrazinamide (Z) 20–30 mg/kg/day</b><br>
   ${Zmin.toFixed(0)} – ${Zmax.toFixed(0)} mg/day (max 2,000 mg)<br>
@@ -109,7 +110,8 @@ function calculate() {
 
   <b>Ethambutol (E) 15–20 mg/kg/day</b><br>
   ${Emin.toFixed(0)} – ${Emax.toFixed(0)} mg/day (max 1,200 mg)<br>
-  เม็ดละ 500 mg → ${Erec}
+  • เม็ดละ 400 mg → ${E400}<br>
+  • เม็ดละ 500 mg → ${E500}
   </div>
   `;
 
@@ -140,7 +142,7 @@ function calculate() {
   `;
 
   /* =========================
-     4) วัณโรคแฝง 3HP
+     4) วัณโรคแฝง (3HP)
      ========================= */
   let inh = 0, rpt = 0;
 
